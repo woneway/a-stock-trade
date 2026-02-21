@@ -21,16 +21,64 @@ def get_trades(db: Session = Depends(get_db), trade_date: date = None):
     statement = select(Trade).order_by(Trade.trade_date.desc())
     if trade_date:
         statement = statement.where(Trade.trade_date == trade_date)
-    return db.exec(statement).all()
+    results = db.exec(statement).all()
+    return [
+        TradeResponse(
+            stock_code=t.code,
+            stock_name=t.name,
+            trade_type=t.action,
+            price=t.price,
+            quantity=t.quantity,
+            amount=t.amount,
+            fee=t.fee,
+            reason=t.reason,
+            entry_price=t.entry_price,
+            exit_price=t.exit_price,
+            pnl=t.pnl,
+            pnl_percent=t.pnl_percent,
+            trade_date=t.trade_date,
+            id=t.id,
+        )
+        for t in results
+    ]
 
 
 @router.post("", response_model=TradeResponse)
 def create_trade(item: TradeCreate, db: Session = Depends(get_db)):
-    db_item = Trade.model_validate(item)
+    db_item = Trade(
+        code=item.stock_code,
+        name=item.stock_name,
+        action=item.trade_type,
+        price=item.price,
+        quantity=item.quantity,
+        amount=item.amount,
+        fee=item.fee,
+        reason=item.reason,
+        entry_price=item.entry_price,
+        exit_price=item.exit_price,
+        pnl=item.pnl,
+        pnl_percent=item.pnl_percent,
+        trade_date=item.trade_date,
+    )
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
-    return db_item
+    return TradeResponse(
+        stock_code=db_item.code,
+        stock_name=db_item.name,
+        trade_type=db_item.action,
+        price=db_item.price,
+        quantity=db_item.quantity,
+        amount=db_item.amount,
+        fee=db_item.fee,
+        reason=db_item.reason,
+        entry_price=db_item.entry_price,
+        exit_price=db_item.exit_price,
+        pnl=db_item.pnl,
+        pnl_percent=db_item.pnl_percent,
+        trade_date=db_item.trade_date,
+        id=db_item.id,
+    )
 
 
 @router.get("/summary", response_model=TradeSummary)
@@ -57,4 +105,19 @@ def get_trade(item_id: int, db: Session = Depends(get_db)):
     item = db.get(Trade, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Trade not found")
-    return item
+    return TradeResponse(
+        stock_code=item.code,
+        stock_name=item.name,
+        trade_type=item.action,
+        price=item.price,
+        quantity=item.quantity,
+        amount=item.amount,
+        fee=item.fee,
+        reason=item.reason,
+        entry_price=item.entry_price,
+        exit_price=item.exit_price,
+        pnl=item.pnl,
+        pnl_percent=item.pnl_percent,
+        trade_date=item.trade_date,
+        id=item.id,
+    )

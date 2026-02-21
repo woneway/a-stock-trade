@@ -4,16 +4,17 @@ from typing import Optional
 
 
 class PositionBase(BaseModel):
-    code: str
-    name: str
+    stock_code: str
+    stock_name: str
     quantity: int
-    avg_cost: float
+    available_quantity: int = 0
+    cost_price: float
     current_price: float = 0
     market_value: float = 0
-    profit_loss: float = 0
+    profit_amount: float = 0
     profit_ratio: float = 0
     status: str = "holding"
-    entry_date: date
+    opened_at: date
 
 
 class PositionCreate(PositionBase):
@@ -22,10 +23,11 @@ class PositionCreate(PositionBase):
 
 class PositionUpdate(BaseModel):
     quantity: Optional[int] = None
-    avg_cost: Optional[float] = None
+    available_quantity: Optional[int] = None
+    cost_price: Optional[float] = None
     current_price: Optional[float] = None
     market_value: Optional[float] = None
-    profit_loss: Optional[float] = None
+    profit_amount: Optional[float] = None
     profit_ratio: Optional[float] = None
     status: Optional[str] = None
 

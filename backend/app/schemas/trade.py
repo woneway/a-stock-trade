@@ -4,9 +4,9 @@ from typing import Optional
 
 
 class TradeBase(BaseModel):
-    code: str
-    name: str
-    action: str
+    stock_code: str
+    stock_name: str
+    trade_type: str
     price: float
     quantity: int
     amount: float
@@ -23,8 +23,8 @@ class TradeCreate(TradeBase):
 
 
 class TradeResponse(TradeBase):
-    id: Optional[int] = None
     trade_date: date
+    id: Optional[int] = None
 
     class Config:
         from_attributes = True
