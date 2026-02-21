@@ -1,0 +1,17 @@
+from sqlmodel import SQLModel, create_engine
+from sqlalchemy.pool import StaticPool
+from app.config import settings
+
+connect_args = {}
+if "sqlite" in settings.DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+    poolclass=StaticPool,
+)
+
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
