@@ -44,6 +44,8 @@ interface WatchStock {
   change: number;
   strategy: string;
   status: 'observing' | 'pending' | 'holding';
+  quantity?: number;
+  entryPrice?: number;
 }
 
 interface Alert {
@@ -98,6 +100,8 @@ interface Review {
 export default function TodayPlan() {
   const [activeTab, setActiveTab] = useState<'pre' | 'in' | 'post'>('pre');
   const [showTradeModal, setShowTradeModal] = useState(false);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [newStock, setNewStock] = useState({ code: '', name: '', strategy: '追涨' });
   const [selectedStock, setSelectedStock] = useState<WatchStock | null>(null);
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   
@@ -136,11 +140,19 @@ export default function TodayPlan() {
     { name: 'AI', change: -0.5, type: 'watch' },
   ]);
 
-  const [watchStocks] = useState<WatchStock[]>([
+  const [watchStocks, setWatchStocks] = useState<WatchStock[]>([
     { code: '600519', name: '贵州茅台', price: 1850, change: 2.8, strategy: '追涨', status: 'observing' },
     { code: '300750', name: '宁德时代', price: 275, change: -1.8, strategy: '低吸', status: 'pending' },
-    { code: '002594', name: '比亚迪', price: 268, change: 3.1, strategy: '追涨', status: 'holding' },
+    { code: '002594', name: '比亚迪', price: 268, change: 3.1, strategy: '追涨', status: 'holding', quantity: 100, entryPrice: 260 },
   ]);
+
+  const handleAddStock = () => {
+    if (newStock.code && newStock.name) {
+      setWatchStocks([...watchStocks, { ...newStock, price: 0, change: 0, status: 'observing' } as WatchStock]);
+      setNewStock({ code: '', name: '', strategy: '追涨' });
+      setShowAddStockModal(false);
+    }
+  };
 
   const [news] = useState([
     { type: '政策', content: 'XXX会议召开，利好AI板块' },
@@ -489,7 +501,10 @@ export default function TodayPlan() {
       {activeTab === 'in' && (
         <div className="tab-content">
           <div className="plan-section">
-            <h3>关注股票</h3>
+            <div className="section-header">
+              <h3>关注股票</h3>
+              <button className="btn btn-sm" onClick={() => setShowAddStockModal(true)}>+ 添加股票</button>
+            </div>
             <div className="stock-table">
               <table>
                 <thead>
@@ -498,6 +513,7 @@ export default function TodayPlan() {
                     <th>现价</th>
                     <th>涨跌幅</th>
                     <th>策略</th>
+                    <th>持仓/成本</th>
                     <th>状态</th>
                     <th>操作</th>
                   </tr>
@@ -516,6 +532,17 @@ export default function TodayPlan() {
                         {stock.change >= 0 ? '+' : ''}{stock.change}%
                       </td>
                       <td>{stock.strategy}</td>
+                      <td>
+                        {stock.status === 'holding' && stock.entryPrice && stock.quantity ? (
+                          <div>
+                            <div>{stock.quantity}股</div>
+                            <div className="text-sm text-gray">成本¥{stock.entryPrice}</div>
+                            <div className={stock.price >= stock.entryPrice ? 'positive' : 'negative'}>
+                              {((stock.price - stock.entryPrice) / stock.entryPrice * 100).toFixed(2)}%
+                            </div>
+                          </div>
+                        ) : '-'}
+                      </td>
                       <td>
                         <span className={`status-tag ${getStatusClass(stock.status)}`}>
                           {getStatusLabel(stock.status)}
@@ -678,6 +705,54 @@ export default function TodayPlan() {
         </div>
       )}
 
+      {showAddStockModal && (
+        <div className="modal-overlay" onClick={() => setShowAddStockModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>添加关注股票</h3>
+              <button className="modal-close" onClick={() => setShowAddStockModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>股票代码</label>
+                <input
+                  type="text"
+                  placeholder="如: 600519"
+                  value={newStock.code}
+                  onChange={e => setNewStock({ ...newStock, code: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>股票名称</label>
+                <input
+                  type="text"
+                  placeholder="如: 贵州茅台"
+                  value={newStock.name}
+                  onChange={e => setNewStock({ ...newStock, name: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>策略</label>
+                <select
+                  value={newStock.strategy}
+                  onChange={e => setNewStock({ ...newStock, strategy: e.target.value })}
+                >
+                  <option value="追涨">追涨</option>
+                  <option value="低吸">低吸</option>
+                  <option value="首板">首板</option>
+                  <option value="龙头">龙头</option>
+                  <option value="反包">反包</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn" onClick={() => setShowAddStockModal(false)}>取消</button>
+              <button className="btn btn-primary" onClick={handleAddStock}>添加</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTradeModal && selectedStock && (
         <div className="modal-overlay" onClick={() => setShowTradeModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -705,10 +780,29 @@ export default function TodayPlan() {
                   <span className="label">策略</span>
                   <span className="value">{selectedStock.strategy}</span>
                 </div>
+                {tradeType === 'sell' && selectedStock.status === 'holding' && selectedStock.entryPrice && selectedStock.quantity && (
+                  <>
+                    <div className="trade-info-item">
+                      <span className="label">持仓数量</span>
+                      <span className="value">{selectedStock.quantity}股</span>
+                    </div>
+                    <div className="trade-info-item">
+                      <span className="label">成本价</span>
+                      <span className="value">¥{selectedStock.entryPrice}</span>
+                    </div>
+                    <div className="trade-info-item">
+                      <span className="label">持仓盈亏</span>
+                      <span className={`value ${(selectedStock.price - selectedStock.entryPrice) >= 0 ? 'positive' : 'negative'}`}>
+                        {(selectedStock.price - selectedStock.entryPrice) >= 0 ? '+' : ''}{((selectedStock.price - selectedStock.entryPrice) / selectedStock.entryPrice * 100).toFixed(2)}%
+                        (¥{((selectedStock.price - selectedStock.entryPrice) * selectedStock.quantity).toLocaleString()})
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="form-group">
-                <label>买入数量(手)</label>
-                <input type="number" placeholder="1手=100股" defaultValue={1} />
+                <label>{tradeType === 'sell' ? '卖出数量' : '买入数量'}(手)</label>
+                <input type="number" placeholder="1手=100股" defaultValue={tradeType === 'sell' && selectedStock.quantity ? Math.floor(selectedStock.quantity / 100) : 1} />
               </div>
               <div className="trade-calc">
                 <div className="calc-item">
