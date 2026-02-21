@@ -18,10 +18,20 @@ export default function Settings() {
 
   const [riskForm, setRiskForm] = useState({
     max_position_ratio: 20,
+    max_positions: 5,
     daily_loss_limit: 5,
+    weekly_loss_limit: 10,
+    monthly_loss_limit: 20,
     default_stop_loss: -5,
     default_take_profit: 10,
-    max_positions: 5,
+    trailing_stop: false,
+    trailing_stop_percent: 3,
+    position_size_by_win_rate: true,
+    min_win_rate: 45,
+    allow_add_position: false,
+    max_add_position: 1,
+    force_close_on_risk: true,
+    cooling_period_minutes: 30,
   });
 
   const [notificationForm, setNotificationForm] = useState({
@@ -52,11 +62,21 @@ export default function Settings() {
         available_cash: data.account.available_cash,
       });
       setRiskForm({
-        max_position_ratio: data.risk_config.max_position_ratio,
-        daily_loss_limit: data.risk_config.daily_loss_limit,
-        default_stop_loss: data.risk_config.default_stop_loss,
-        default_take_profit: data.risk_config.default_take_profit,
-        max_positions: data.risk_config.max_positions,
+        max_position_ratio: data.risk_config.max_position_ratio || 20,
+        max_positions: data.risk_config.max_positions || 5,
+        daily_loss_limit: data.risk_config.daily_loss_limit || 5,
+        weekly_loss_limit: data.risk_config.weekly_loss_limit || 10,
+        monthly_loss_limit: data.risk_config.monthly_loss_limit || 20,
+        default_stop_loss: data.risk_config.default_stop_loss || -5,
+        default_take_profit: data.risk_config.default_take_profit || 10,
+        trailing_stop: data.risk_config.trailing_stop || false,
+        trailing_stop_percent: data.risk_config.trailing_stop_percent || 3,
+        position_size_by_win_rate: data.risk_config.position_size_by_win_rate ?? true,
+        min_win_rate: data.risk_config.min_win_rate || 45,
+        allow_add_position: data.risk_config.allow_add_position ?? false,
+        max_add_position: data.risk_config.max_add_position || 1,
+        force_close_on_risk: data.risk_config.force_close_on_risk ?? true,
+        cooling_period_minutes: data.risk_config.cooling_period_minutes || 30,
       });
       setNotificationForm({
         signal_notify: data.notification_config.signal_notify,
@@ -176,9 +196,9 @@ export default function Settings() {
       )}
 
       {activeTab === 'risk' && (
-        <div className="review-section" style={{ maxWidth: '600px' }}>
+        <div className="review-section" style={{ maxWidth: '700px' }}>
           <div className="card">
-            <h3 style={{ marginBottom: '20px' }}>风控参数</h3>
+            <h3 style={{ marginBottom: '20px' }}>仓位控制</h3>
             <div className="form-row">
               <div className="form-group">
                 <label>单票最大仓位</label>
@@ -194,6 +214,31 @@ export default function Settings() {
             </div>
             <div className="form-row">
               <div className="form-group">
+                <label>是否按胜率调仓</label>
+                <div className={`toggle-switch ${riskForm.position_size_by_win_rate ? 'active' : ''}`} onClick={() => setRiskForm({ ...riskForm, position_size_by_win_rate: !riskForm.position_size_by_win_rate })} />
+              </div>
+              <div className="form-group">
+                <label>最低胜率要求</label>
+                <div className="input-wrapper">
+                  <input type="number" value={riskForm.min_win_rate} onChange={(e) => setRiskForm({ ...riskForm, min_win_rate: parseFloat(e.target.value) })} placeholder="45" />
+                  <span className="input-suffix">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>允许补仓</label>
+                <div className={`toggle-switch ${riskForm.allow_add_position ? 'active' : ''}`} onClick={() => setRiskForm({ ...riskForm, allow_add_position: !riskForm.allow_add_position })} />
+              </div>
+              <div className="form-group">
+                <label>最大补仓次数</label>
+                <input type="number" value={riskForm.max_add_position} onChange={(e) => setRiskForm({ ...riskForm, max_add_position: parseInt(e.target.value) })} placeholder="1" />
+              </div>
+            </div>
+
+            <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>亏损限制</h3>
+            <div className="form-row">
+              <div className="form-group">
                 <label>日内亏损限制</label>
                 <div className="input-wrapper">
                   <input type="number" step="0.1" value={riskForm.daily_loss_limit} onChange={(e) => setRiskForm({ ...riskForm, daily_loss_limit: parseFloat(e.target.value) })} placeholder="5" />
@@ -201,21 +246,68 @@ export default function Settings() {
                 </div>
               </div>
               <div className="form-group">
+                <label>周亏损限制</label>
+                <div className="input-wrapper">
+                  <input type="number" step="0.1" value={riskForm.weekly_loss_limit} onChange={(e) => setRiskForm({ ...riskForm, weekly_loss_limit: parseFloat(e.target.value) })} placeholder="10" />
+                  <span className="input-suffix">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>月亏损限制</label>
+                <div className="input-wrapper">
+                  <input type="number" step="0.1" value={riskForm.monthly_loss_limit} onChange={(e) => setRiskForm({ ...riskForm, monthly_loss_limit: parseFloat(e.target.value) })} placeholder="20" />
+                  <span className="input-suffix">%</span>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>触发风控强平</label>
+                <div className={`toggle-switch ${riskForm.force_close_on_risk ? 'active' : ''}`} onClick={() => setRiskForm({ ...riskForm, force_close_on_risk: !riskForm.force_close_on_risk })} />
+              </div>
+            </div>
+
+            <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>止盈止损</h3>
+            <div className="form-row">
+              <div className="form-group">
                 <label>默认止损</label>
                 <div className="input-wrapper">
                   <input type="number" step="0.1" value={riskForm.default_stop_loss} onChange={(e) => setRiskForm({ ...riskForm, default_stop_loss: parseFloat(e.target.value) })} placeholder="-5" />
                   <span className="input-suffix">%</span>
                 </div>
               </div>
-            </div>
-            <div className="form-group">
-              <label>默认止盈</label>
-              <div className="input-wrapper" style={{ maxWidth: '200px' }}>
-                <input type="number" step="0.1" value={riskForm.default_take_profit} onChange={(e) => setRiskForm({ ...riskForm, default_take_profit: parseFloat(e.target.value) })} placeholder="10" />
-                <span className="input-suffix">%</span>
+              <div className="form-group">
+                <label>默认止盈</label>
+                <div className="input-wrapper">
+                  <input type="number" step="0.1" value={riskForm.default_take_profit} onChange={(e) => setRiskForm({ ...riskForm, default_take_profit: parseFloat(e.target.value) })} placeholder="10" />
+                  <span className="input-suffix">%</span>
+                </div>
               </div>
             </div>
-            <button className="btn btn-primary" onClick={handleSaveRisk} disabled={saving}>{saving ? '保存中...' : '保存设置'}</button>
+            <div className="form-row">
+              <div className="form-group">
+                <label>启用移动止损</label>
+                <div className={`toggle-switch ${riskForm.trailing_stop ? 'active' : ''}`} onClick={() => setRiskForm({ ...riskForm, trailing_stop: !riskForm.trailing_stop })} />
+              </div>
+              <div className="form-group">
+                <label>移动止损幅度</label>
+                <div className="input-wrapper">
+                  <input type="number" step="0.1" value={riskForm.trailing_stop_percent} onChange={(e) => setRiskForm({ ...riskForm, trailing_stop_percent: parseFloat(e.target.value) })} placeholder="3" />
+                  <span className="input-suffix">%</span>
+                </div>
+              </div>
+            </div>
+
+            <h3 style={{ marginTop: '30px', marginBottom: '20px' }}>交易限制</h3>
+            <div className="form-group">
+              <label>亏损后冷却时间</label>
+              <div className="input-wrapper" style={{ maxWidth: '200px' }}>
+                <input type="number" value={riskForm.cooling_period_minutes} onChange={(e) => setRiskForm({ ...riskForm, cooling_period_minutes: parseInt(e.target.value) })} placeholder="30" />
+                <span className="input-suffix">分钟</span>
+              </div>
+            </div>
+
+            <button className="btn btn-primary" onClick={handleSaveRisk} disabled={saving} style={{ marginTop: '20px' }}>{saving ? '保存中...' : '保存设置'}</button>
           </div>
         </div>
       )}
