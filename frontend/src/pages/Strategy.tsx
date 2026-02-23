@@ -78,6 +78,32 @@ interface StrategyForm {
   iteration_history?: string;
 }
 
+// 选股相关类型
+interface Stock {
+  id: number;
+  code: string;
+  name: string;
+  sector?: string;
+  price?: number;
+  change?: number;
+  turnover_rate?: number;
+  volume_ratio?: number;
+  market_cap?: number;
+  limit_consecutive: number;
+}
+
+interface ScanResult {
+  stock_id: number;
+  code: string;
+  name: string;
+  sector?: string;
+  change?: number;
+  limit_consecutive: number;
+  score: number;
+  entry_advice: { signal: string; trigger_type?: string };
+  exit_advice: { stop_loss: string; take_profit_1: string; take_profit_2: string };
+}
+
 export default function Strategy() {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,6 +111,13 @@ export default function Strategy() {
   const [showModal, setShowModal] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
+
+  // 选股弹窗状态
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scanStrategy, setScanStrategy] = useState<Strategy | null>(null);
+  const [scanResults, setScanResults] = useState<ScanResult[]>([]);
+  const [selectedStockIds, setSelectedStockIds] = useState<number[]>([]);
+  const [scanLoading, setScanLoading] = useState(false);
   const [formData, setFormData] = useState<StrategyForm>({
     name: '',
     description: '',
@@ -298,6 +331,44 @@ export default function Strategy() {
     }
   };
 
+  // 选股相关函数
+  const openScanModal = async (strategy: Strategy) => {
+    setScanStrategy(strategy);
+    setShowScanModal(true);
+    setSelectedStockIds([]);
+    await runScan(strategy.id);
+  };
+
+  const runScan = async (strategyId: number) => {
+    setScanLoading(true);
+    try {
+      const res = await axios.post('/api/strategy/scan', { strategy_id: strategyId });
+      setScanResults(res.data.results || []);
+    } catch (err) {
+      console.error('Scan failed:', err);
+      setScanResults([]);
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  const toggleStockSelection = (stockId: number) => {
+    setSelectedStockIds(prev =>
+      prev.includes(stockId)
+        ? prev.filter(id => id !== stockId)
+        : [...prev, stockId]
+    );
+  };
+
+  const handleGeneratePlan = () => {
+    if (selectedStockIds.length === 0) {
+      alert('请先选择股票');
+      return;
+    }
+    // TODO: 生成计划功能
+    alert(`已选择 ${selectedStockIds.length} 只股票，准备生成计划`);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -355,6 +426,9 @@ export default function Strategy() {
                   <span className="strategy-name">{strategy.name}</span>
                   <span className={`status-badge ${strategy.is_active ? 'active' : 'inactive'}`}>
                     {strategy.is_active ? '启用' : '停用'}
+                  </span>
+                  <span className={`time-badge ${strategy.name.includes('尾盘') ? 'mid' : 'pre'}`}>
+                    {strategy.name.includes('尾盘') ? '盘中(14:30)' : '盘前/盘后'}
                   </span>
                   <span className="strategy-meta">
                     {strategy.description || '暂无描述'} | 仓位: {strategy.position_size}% | 止损: {strategy.stop_loss}%
@@ -414,7 +488,8 @@ export default function Strategy() {
                     </div>
                   )}
                   <div className="strategy-actions">
-                    <button className="action-btn primary" onClick={() => openEditModal(strategy)}>编辑</button>
+                    <button className="action-btn primary" onClick={() => openScanModal(strategy)}>选股</button>
+                    <button className="action-btn" onClick={() => openEditModal(strategy)}>编辑</button>
                     <button className="action-btn" onClick={() => handleClone(strategy)}>复制</button>
                     <button className={`action-btn ${strategy.is_active ? 'warning' : 'success'}`} onClick={() => handleToggleActive(strategy)}>
                       {strategy.is_active ? '停用' : '启用'}
@@ -741,6 +816,75 @@ export default function Strategy() {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>取消</button>
               <button className="btn btn-primary" onClick={handleSubmit}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 选股弹窗 */}
+      {showScanModal && (
+        <div className="modal-overlay" onClick={() => setShowScanModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{scanStrategy?.name} - 策略选股</h2>
+              <button onClick={() => setShowScanModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {scanLoading ? (
+                <div className="loading">扫描中...</div>
+              ) : (
+                <>
+                  <div className="scan-summary">
+                    <span>找到 {scanResults.length} 只符合条件的股票</span>
+                    {scanStrategy && (
+                      <span className="scan-params">
+                        止损: {scanStrategy.stop_loss}% |
+                        止盈1: {scanStrategy.take_profit_1}% |
+                        止盈2: {scanStrategy.take_profit_2}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="scan-results">
+                    {scanResults.map((result, index) => (
+                      <div key={result.stock_id} className="scan-result-item">
+                        <div className="scan-result-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedStockIds.includes(result.stock_id)}
+                            onChange={() => toggleStockSelection(result.stock_id)}
+                          />
+                        </div>
+                        <div className="scan-result-rank">{index + 1}</div>
+                        <div className="scan-result-info">
+                          <span className="scan-result-name">{result.code} {result.name}</span>
+                          <span className={`scan-result-score ${result.score >= 70 ? 'high' : result.score >= 50 ? 'mid' : 'low'}`}>
+                            {result.score}分
+                          </span>
+                          {result.change !== undefined && (
+                            <span className="scan-result-change">
+                              {result.change > 0 ? '+' : ''}{result.change.toFixed(2)}%
+                            </span>
+                          )}
+                          {result.limit_consecutive > 0 && (
+                            <span className="scan-result-limit">{result.limit_consecutive}连板</span>
+                          )}
+                        </div>
+                        <div className="scan-result-advice">
+                          <span className="advice-trigger">
+                            [{result.entry_advice.trigger_type || '待定'}]
+                          </span>
+                          <span className="advice-signal">{result.entry_advice.signal}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <span className="selected-count">已选: {selectedStockIds.length} 只</span>
+              <button className="btn btn-secondary" onClick={() => setShowScanModal(false)}>关闭</button>
+              <button className="btn btn-primary" onClick={handleGeneratePlan}>生成计划</button>
             </div>
           </div>
         </div>
