@@ -151,3 +151,61 @@ class SentimentPhaseResponse(SentimentPhaseBase):
 
     class Config:
         from_attributes = True
+
+
+class TurnoverRankBase(BaseModel):
+    code: str
+    name: str
+    turnover_rate: float
+    amount: float
+    change: float
+    sector: Optional[str] = None
+
+
+class TurnoverRankCreate(TurnoverRankBase):
+    trade_date: date
+
+
+class TurnoverRankResponse(TurnoverRankBase):
+    id: Optional[int] = None
+    trade_date: date
+
+    class Config:
+        from_attributes = True
+
+
+class LimitDownDataBase(BaseModel):
+    total: int
+    sector: str
+    stocks: Optional[str] = None
+
+
+class LimitDownDataCreate(LimitDownDataBase):
+    trade_date: date
+
+
+class LimitDownDataResponse(LimitDownDataBase):
+    id: Optional[int] = None
+    trade_date: date
+
+    class Config:
+        from_attributes = True
+
+
+class BoardPromotionBase(BaseModel):
+    sector: str
+    first_board: int
+    second_board: int
+    success_rate: float
+
+
+class BoardPromotionCreate(BoardPromotionBase):
+    trade_date: date
+
+
+class BoardPromotionResponse(BoardPromotionBase):
+    id: Optional[int] = None
+    trade_date: date
+
+    class Config:
+        from_attributes = True

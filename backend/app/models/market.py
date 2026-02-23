@@ -102,3 +102,43 @@ class SentimentPhase(SQLModel, table=True):
     description: str
     advice: str
     trade_date: date = Field(index=True)
+
+
+class TurnoverRank(SQLModel, table=True):
+    __tablename__ = "turnover_ranks"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True)
+    name: str
+    turnover_rate: float = Field(alias="turnoverRate")
+    amount: float
+    change: float
+    sector: Optional[str] = None
+    trade_date: date = Field(index=True)
+
+    class Config:
+        populate_by_name = True
+
+
+class LimitDownData(SQLModel, table=True):
+    __tablename__ = "limit_down_data"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    total: int
+    sector: str
+    stocks: Optional[str] = None
+    trade_date: date = Field(index=True)
+
+
+class BoardPromotion(SQLModel, table=True):
+    __tablename__ = "board_promotions"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sector: str = Field(index=True)
+    first_board: int = Field(alias="firstBoard")
+    second_board: int = Field(alias="secondBoard")
+    success_rate: float = Field(alias="successRate")
+    trade_date: date = Field(index=True)
+
+    class Config:
+        populate_by_name = True

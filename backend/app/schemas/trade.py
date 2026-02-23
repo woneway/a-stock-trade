@@ -17,6 +17,10 @@ class TradeBase(BaseModel):
     pnl: Optional[float] = None
     pnl_percent: Optional[float] = None
 
+    pre_plan_id: Optional[int] = None
+    is_planned: Optional[bool] = False
+    plan_target_price: Optional[float] = None
+
 
 class TradeCreate(TradeBase):
     trade_date: date

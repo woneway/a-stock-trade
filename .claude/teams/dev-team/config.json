@@ -1,0 +1,16 @@
+{
+  "name": "dev-team",
+  "description": "A股交易系统开发团队 - 6人角色扮演",
+  "agents": [
+    "pm",
+    "product",
+    "frontend",
+    "backend",
+    "qa",
+    "user"
+  ],
+  "settings": {
+    "autoStart": true,
+    "parallelMode": true
+  }
+}

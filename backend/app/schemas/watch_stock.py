@@ -10,6 +10,8 @@ class WatchStockBase(BaseModel):
     change: Optional[float] = None
     strategy: str
     status: str = "observing"
+    signal: Optional[str] = None
+    signal_reason: Optional[str] = None
 
 
 class WatchStockCreate(WatchStockBase):
@@ -21,6 +23,8 @@ class WatchStockUpdate(BaseModel):
     change: Optional[float] = None
     strategy: Optional[str] = None
     status: Optional[str] = None
+    signal: Optional[str] = None
+    signal_reason: Optional[str] = None
 
 
 class WatchStockResponse(WatchStockBase):

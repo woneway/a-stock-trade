@@ -13,5 +13,7 @@ class WatchStock(SQLModel, table=True):
     change: Optional[float] = None
     strategy: str
     status: str = Field(default="observing")
+    signal: Optional[str] = None
+    signal_reason: Optional[str] = None
     created_at: date = Field(default_factory=date.today)
     updated_at: date = Field(default_factory=date.today)

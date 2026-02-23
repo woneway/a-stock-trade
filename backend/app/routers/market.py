@@ -13,6 +13,9 @@ from app.models.market import (
     SectorStrength,
     News,
     SentimentPhase,
+    TurnoverRank,
+    LimitDownData,
+    BoardPromotion,
 )
 from app.schemas.market import (
     MarketIndexCreate,
@@ -31,6 +34,12 @@ from app.schemas.market import (
     NewsResponse,
     SentimentPhaseCreate,
     SentimentPhaseResponse,
+    TurnoverRankCreate,
+    TurnoverRankResponse,
+    LimitDownDataCreate,
+    LimitDownDataResponse,
+    BoardPromotionCreate,
+    BoardPromotionResponse,
 )
 
 
@@ -47,7 +56,11 @@ def get_market_indices(db: Session = Depends(get_db), trade_date: date = None):
     if trade_date is None:
         trade_date = date.today()
     statement = select(MarketIndex).where(MarketIndex.trade_date == trade_date)
-    return db.exec(statement).all()
+    results = db.exec(statement).all()
+    if not results:
+        latest = db.exec(select(MarketIndex).order_by(MarketIndex.trade_date.desc()).limit(10)).all()
+        return latest
+    return results
 
 
 @router.get("/limit-up", response_model=LimitUpDataResponse)
@@ -147,6 +160,69 @@ def create_sentiment(item: SentimentPhaseCreate, db: Session = Depends(get_db)):
         db.refresh(existing)
         return existing
     db_item = SentimentPhase.model_validate(item)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@router.get("/turnover-rank", response_model=List[TurnoverRankResponse])
+def get_turnover_rank(db: Session = Depends(get_db), trade_date: date = None, limit: int = 10):
+    if trade_date is None:
+        trade_date = date.today()
+    statement = (
+        select(TurnoverRank)
+        .where(TurnoverRank.trade_date == trade_date)
+        .order_by(TurnoverRank.turnover_rate.desc())
+        .limit(limit)
+    )
+    results = db.exec(statement).all()
+    if not results:
+        return []
+    return results
+
+
+@router.post("/turnover-rank", response_model=TurnoverRankResponse)
+def create_turnover_rank(item: TurnoverRankCreate, db: Session = Depends(get_db)):
+    db_item = TurnoverRank.model_validate(item)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@router.get("/limit-down", response_model=List[LimitDownDataResponse])
+def get_limit_down_data(db: Session = Depends(get_db), trade_date: date = None):
+    if trade_date is None:
+        trade_date = date.today()
+    statement = select(LimitDownData).where(LimitDownData.trade_date == trade_date)
+    return db.exec(statement).all()
+
+
+@router.post("/limit-down", response_model=LimitDownDataResponse)
+def create_limit_down_data(item: LimitDownDataCreate, db: Session = Depends(get_db)):
+    db_item = LimitDownData.model_validate(item)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@router.get("/board-promotion", response_model=List[BoardPromotionResponse])
+def get_board_promotion(db: Session = Depends(get_db), trade_date: date = None):
+    if trade_date is None:
+        trade_date = date.today()
+    statement = (
+        select(BoardPromotion)
+        .where(BoardPromotion.trade_date == trade_date)
+        .order_by(BoardPromotion.success_rate.desc())
+    )
+    return db.exec(statement).all()
+
+
+@router.post("/board-promotion", response_model=BoardPromotionResponse)
+def create_board_promotion(item: BoardPromotionCreate, db: Session = Depends(get_db)):
+    db_item = BoardPromotion.model_validate(item)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

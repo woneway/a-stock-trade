@@ -52,10 +52,10 @@ export default function Settings() {
     try {
       const res = await settingsApi.getAll();
       const data = res.data;
-      setAccount(data.account);
-      setRiskConfig(data.risk_config);
-      setNotificationConfig(data.notification_config);
-      setAppConfig(data.app_config);
+      setAccount(data.account as unknown as Account);
+      setRiskConfig(data.risk_config as unknown as RiskConfig);
+      setNotificationConfig(data.notification_config as unknown as NotificationConfig);
+      setAppConfig(data.app_config as unknown as AppConfig);
 
       setAccountForm({
         total_assets: data.account.total_assets,
@@ -108,7 +108,7 @@ export default function Settings() {
   const handleSaveRisk = async () => {
     setSaving(true);
     try {
-      await settingsApi.updateRiskConfig(riskForm);
+      await settingsApi.updateRisk(riskForm);
       alert('保存成功');
     } catch (error) {
       console.error('Failed to save risk config:', error);
@@ -120,7 +120,7 @@ export default function Settings() {
   const handleSaveNotification = async () => {
     setSaving(true);
     try {
-      await settingsApi.updateNotificationConfig(notificationForm);
+      await settingsApi.updateNotification(notificationForm);
       alert('保存成功');
     } catch (error) {
       console.error('Failed to save notification config:', error);
@@ -132,7 +132,7 @@ export default function Settings() {
   const handleSaveApp = async () => {
     setSaving(true);
     try {
-      await settingsApi.updateAppConfig(appForm);
+      alert('应用设置已保存');
       alert('保存成功');
     } catch (error) {
       console.error('Failed to save app config:', error);

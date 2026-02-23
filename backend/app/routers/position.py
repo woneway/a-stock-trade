@@ -22,25 +22,42 @@ def get_positions(db: Session = Depends(get_db), status: str = None):
     if status:
         statement = statement.where(Position.status == status)
     results = db.exec(statement).all()
-    return [
-        PositionResponse(
+    
+    position_map = {}
+    for p in results:
+        key = (p.code, p.avg_cost)
+        if key in position_map:
+            existing = position_map[key]
+            existing.quantity += p.quantity
+            existing.avg_cost = (existing.avg_cost * existing.quantity + p.avg_cost * p.quantity) / (existing.quantity + p.quantity)
+        else:
+            position_map[key] = p
+    
+    positions = []
+    for p in position_map.values():
+        if p.status and status and p.status != status:
+            continue
+        current_price = p.current_price if p.current_price and p.current_price > 0 else p.avg_cost
+        market_value = p.quantity * current_price
+        profit_loss = (current_price - p.avg_cost) * p.quantity
+        profit_ratio = ((current_price - p.avg_cost) / p.avg_cost * 100) if p.avg_cost > 0 else 0
+        positions.append(PositionResponse(
             stock_code=p.code,
             stock_name=p.name,
             quantity=p.quantity,
             available_quantity=p.quantity,
             cost_price=p.avg_cost,
-            current_price=p.current_price,
-            market_value=p.market_value,
-            profit_amount=p.profit_loss,
-            profit_ratio=p.profit_ratio,
+            current_price=current_price,
+            market_value=market_value,
+            profit_amount=profit_loss,
+            profit_ratio=profit_ratio,
             status=p.status,
             opened_at=p.entry_date,
             id=p.id,
             created_at=p.created_at,
             updated_at=p.updated_at,
-        )
-        for p in results
-    ]
+        ))
+    return positions
 
 
 @router.post("", response_model=PositionResponse)
@@ -83,16 +100,20 @@ def get_position(item_id: int, db: Session = Depends(get_db)):
     item = db.get(Position, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Position not found")
+    current_price = item.current_price if item.current_price and item.current_price > 0 else item.avg_cost
+    market_value = item.quantity * current_price
+    profit_loss = (current_price - item.avg_cost) * item.quantity
+    profit_ratio = ((current_price - item.avg_cost) / item.avg_cost * 100) if item.avg_cost > 0 else 0
     return PositionResponse(
         stock_code=item.code,
         stock_name=item.name,
         quantity=item.quantity,
         available_quantity=item.quantity,
         cost_price=item.avg_cost,
-        current_price=item.current_price,
-        market_value=item.market_value,
-        profit_amount=item.profit_loss,
-        profit_ratio=item.profit_ratio,
+        current_price=current_price,
+        market_value=market_value,
+        profit_amount=profit_loss,
+        profit_ratio=profit_ratio,
         status=item.status,
         opened_at=item.entry_date,
         id=item.id,
@@ -138,16 +159,20 @@ def close_position(item_id: int, db: Session = Depends(get_db)):
     db.add(item)
     db.commit()
     db.refresh(item)
+    current_price = item.current_price if item.current_price and item.current_price > 0 else item.avg_cost
+    market_value = item.quantity * current_price
+    profit_loss = (current_price - item.avg_cost) * item.quantity
+    profit_ratio = ((current_price - item.avg_cost) / item.avg_cost * 100) if item.avg_cost > 0 else 0
     return PositionResponse(
         stock_code=item.code,
         stock_name=item.name,
         quantity=item.quantity,
         available_quantity=item.quantity,
         cost_price=item.avg_cost,
-        current_price=item.current_price,
-        market_value=item.market_value,
-        profit_amount=item.profit_loss,
-        profit_ratio=item.profit_ratio,
+        current_price=current_price,
+        market_value=market_value,
+        profit_amount=profit_loss,
+        profit_ratio=profit_ratio,
         status=item.status,
         opened_at=item.entry_date,
         id=item.id,
