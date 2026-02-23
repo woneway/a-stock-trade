@@ -30,6 +30,23 @@ interface CandidateStockInput {
   priority: number;
 }
 
+interface ScannedStock {
+  code: string;
+  name: string;
+  score: number;
+  change?: number;
+  limit_consecutive: number;
+  entry_advice: { signal: string; trigger_type?: string };
+}
+
+interface StrategyStocks {
+  strategyId: number;
+  strategyName: string;
+  stocks: ScannedStock[];
+  selectedStocks: string[];
+  scanning: boolean;
+}
+
 interface PrePlan {
   id?: number;
   strategy_ids?: string;
@@ -47,6 +64,8 @@ interface PrePlan {
   plan_date?: string;
   trade_date?: string;
   created_at?: string;
+  watch_indicators?: string;
+  watch_messages?: string;
 }
 
 interface Trade {
@@ -90,14 +109,29 @@ export default function PlanList() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PrePlan | null>(null);
   const [candidateStocksEdit, setCandidateStocksEdit] = useState<CandidateStockInput[]>([]);
+  const [editingStrategyIds, setEditingStrategyIds] = useState<number[]>([]);
+  const [editingStrategyStocks, setEditingStrategyStocks] = useState<StrategyStocks[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategyIds, setSelectedStrategyIds] = useState<number[]>([]);
+  const [strategyStocks, setStrategyStocks] = useState<StrategyStocks[]>([]);
   const [creatingPlan, setCreatingPlan] = useState(false);
+  const [createPlanDate, setCreatePlanDate] = useState(dayjs().add(1, 'day').format('YYYY-MM-DD'));
+  const [createWatchIndicators, setCreateWatchIndicators] = useState<string[]>(['涨停数量', '下跌家数', '连板数量']);
+  const [createWatchMessages, setCreateWatchMessages] = useState<string[]>(['政策消息', '外围市场']);
 
   useEffect(() => {
     loadPlans();
     loadStrategies();
   }, [currentMonth]);
+
+  useEffect(() => {
+    if (strategies.length > 0 && editingStrategyIds.length > 0) {
+      setEditingStrategyStocks(prev => prev.map(s => {
+        const strategy = strategies.find(str => str.id === s.strategyId);
+        return { ...s, strategyName: strategy?.name || s.strategyName };
+      }));
+    }
+  }, [strategies]);
 
   const loadStrategies = async () => {
     try {
@@ -180,19 +214,124 @@ export default function PlanList() {
     }
   };
 
+  const toggleStrategy = (id: number) => {
+    setSelectedStrategyIds(prev =>
+      prev.includes(id)
+        ? prev.filter(s => s !== id)
+        : [...prev, id]
+    );
+  };
+
+  const scanStrategyStocks = async (strategyId: number, strategyName: string) => {
+    setStrategyStocks(prev => prev.map(s => 
+      s.strategyId === strategyId ? { ...s, scanning: true } : s
+    ));
+    try {
+      const res = await axios.post('/api/strategy/scan', { strategy_id: strategyId });
+      const results = res.data.results || [];
+      setStrategyStocks(prev => prev.map(s => 
+        s.strategyId === strategyId ? { ...s, stocks: results, scanning: false } : s
+      ));
+    } catch (err) {
+      console.error('Scan failed:', err);
+      setStrategyStocks(prev => prev.map(s => 
+        s.strategyId === strategyId ? { ...s, scanning: false } : s
+      ));
+    }
+  };
+
+  const toggleStockSelection = (strategyId: number, code: string) => {
+    setStrategyStocks(prev => prev.map(s => {
+      if (s.strategyId !== strategyId) return s;
+      const selected = s.selectedStocks.includes(code)
+        ? s.selectedStocks.filter(c => c !== code)
+        : [...s.selectedStocks, code];
+      return { ...s, selectedStocks: selected };
+    }));
+  };
+
+  const toggleEditingStrategy = (id: number) => {
+    setEditingStrategyIds(prev =>
+      prev.includes(id)
+        ? prev.filter(s => s !== id)
+        : [...prev, id]
+    );
+    if (!editingStrategyIds.includes(id)) {
+      const strategy = strategies.find(s => s.id === id);
+      setEditingStrategyStocks(prev => [...prev, { strategyId: id, strategyName: strategy?.name || '', stocks: [], selectedStocks: [], scanning: false }]);
+    } else {
+      setEditingStrategyStocks(prev => prev.filter(s => s.strategyId !== id));
+    }
+  };
+
+  const scanEditingStrategyStocks = async (strategyId: number, strategyName: string) => {
+    setEditingStrategyStocks(prev => prev.map(s =>
+      s.strategyId === strategyId ? { ...s, scanning: true } : s
+    ));
+    try {
+      const res = await axios.post('/api/strategy/scan', { strategy_id: strategyId });
+      const results = res.data.results || [];
+      setEditingStrategyStocks(prev => prev.map(s =>
+        s.strategyId === strategyId ? { ...s, stocks: results, scanning: false } : s
+      ));
+    } catch (err) {
+      console.error('Scan failed:', err);
+      setEditingStrategyStocks(prev => prev.map(s =>
+        s.strategyId === strategyId ? { ...s, scanning: false } : s
+      ));
+    }
+  };
+
+  const toggleEditingStockSelection = (strategyId: number, code: string) => {
+    setEditingStrategyStocks(prev => prev.map(s => {
+      if (s.strategyId !== strategyId) return s;
+      const selected = s.selectedStocks.includes(code)
+        ? s.selectedStocks.filter(c => c !== code)
+        : [...s.selectedStocks, code];
+      return { ...s, selectedStocks: selected };
+    }));
+  };
+
   const handleCreatePlan = async () => {
     if (selectedStrategyIds.length === 0) {
       alert('请至少选择一个策略');
       return;
     }
 
+    const allSelectedStocks = strategyStocks.flatMap(s => 
+      s.selectedStocks.map(code => {
+        const stock = s.stocks.find(st => st.code === code);
+        return {
+          code,
+          name: stock?.name || '',
+          buy_reason: stock?.entry_advice?.signal || '',
+          sell_reason: '',
+          priority: 1,
+        };
+      })
+    );
+
     setCreatingPlan(true);
     try {
       const strategyIdsStr = selectedStrategyIds.join(',');
-      await axios.post(`/api/plan/generate-from-strategies?strategy_ids=${strategyIdsStr}`);
-      alert('计划已生成，请编辑候选股票');
+      await axios.post(`/api/plan/generate-from-strategies?strategy_ids=${strategyIdsStr}&trade_date=${createPlanDate}`);
+      
+      if (allSelectedStocks.length > 0) {
+        const today = dayjs().format('YYYY-MM-DD');
+        const planRes = await axios.get('/api/plan/pre', { params: { trade_date: createPlanDate } });
+        if (planRes.data?.id) {
+          await axios.put(`/api/plan/pre/${planRes.data.id}`, {
+            candidate_stocks: JSON.stringify(allSelectedStocks),
+            watch_indicators: createWatchIndicators.join(','),
+            watch_messages: createWatchMessages.join(','),
+          });
+        }
+      }
+      
+      alert('计划已生成');
       setShowCreateModal(false);
       setSelectedStrategyIds([]);
+      setStrategyStocks([]);
       loadPlans();
     } catch (err) {
       console.error('Failed to create plan:', err);
@@ -202,29 +341,53 @@ export default function PlanList() {
     }
   };
 
-  const toggleStrategy = (id: number) => {
-    setSelectedStrategyIds(prev =>
-      prev.includes(id)
-        ? prev.filter(s => s !== id)
-        : [...prev, id]
-    );
-  };
-
   const openEditModal = (plan: PlanRecord) => {
     if (!plan.prePlan) return;
     setEditingPlan(plan.prePlan);
-    
+
+    const strategyIds: number[] = [];
+    if (plan.prePlan.strategy_ids) {
+      try {
+        let parsed = plan.prePlan.strategy_ids;
+        if (typeof parsed === 'string') {
+          parsed = parsed.trim();
+          if (parsed.startsWith('[')) {
+            parsed = JSON.parse(parsed);
+          } else {
+            parsed = parsed.split(',').map((s: string) => s.trim()).filter(Boolean);
+          }
+        }
+        if (Array.isArray(parsed)) {
+          strategyIds.push(...parsed.map((id: string | number) => typeof id === 'number' ? id : parseInt(id)).filter((id: number) => !isNaN(id)));
+        }
+      } catch (e) {
+        console.error('Failed to parse strategy_ids:', e);
+      }
+    }
+    setEditingStrategyIds(strategyIds);
+
+    const strategyStocksData = strategyIds.map(id => {
+      const strategy = strategies.find(s => s.id === id);
+      return { strategyId: id, strategyName: strategy?.name || `策略${id}`, stocks: [], selectedStocks: [], scanning: false };
+    });
+    setEditingStrategyStocks(strategyStocksData);
+
     const stocks: CandidateStockInput[] = [];
     if (plan.prePlan.candidate_stocks) {
       try {
-        const parsed = JSON.parse(plan.prePlan.candidate_stocks);
-        stocks.push(...parsed.map((s: CandidateStock) => ({
-          code: s.code || '',
-          name: s.name || '',
-          buy_reason: s.buy_reason || '',
-          sell_reason: s.sell_reason || '',
-          priority: s.priority || 0,
-        })));
+        let parsed = plan.prePlan.candidate_stocks;
+        if (typeof parsed === 'string') {
+          parsed = JSON.parse(parsed);
+        }
+        if (Array.isArray(parsed)) {
+          stocks.push(...parsed.map((s: CandidateStock) => ({
+            code: s.code || '',
+            name: s.name || '',
+            buy_reason: s.buy_reason || '',
+            sell_reason: s.sell_reason || '',
+            priority: s.priority || 0,
+          })));
+        }
       } catch (e) {
         console.error('Failed to parse candidate_stocks:', e);
       }
@@ -249,16 +412,34 @@ export default function PlanList() {
 
   const handleSaveEdit = async () => {
     if (!editingPlan?.id) return;
-    
+
+    const allSelectedStocks = editingStrategyStocks.flatMap(s =>
+      s.selectedStocks.map(code => {
+        const stock = s.stocks.find(st => st.code === code);
+        return {
+          code,
+          name: stock?.name || '',
+          buy_reason: stock?.entry_advice?.signal || '',
+          sell_reason: '',
+          priority: 1,
+        };
+      })
+    );
+
+    const mergedStocks = [...candidateStocksEdit, ...allSelectedStocks];
+
     try {
       await axios.put(`/api/plan/pre/${editingPlan.id}`, {
-        candidate_stocks: JSON.stringify(candidateStocksEdit),
+        strategy_ids: JSON.stringify(editingStrategyIds),
+        candidate_stocks: JSON.stringify(mergedStocks),
         sentiment: editingPlan.sentiment,
         external_signals: editingPlan.external_signals,
         sectors: editingPlan.sectors,
         plan_basis: editingPlan.plan_basis,
         entry_condition: editingPlan.entry_condition,
         exit_condition: editingPlan.exit_condition,
+        watch_indicators: editingPlan.watch_indicators,
+        watch_messages: editingPlan.watch_messages,
       });
       alert('计划已更新');
       setShowEditModal(false);
@@ -298,18 +479,16 @@ export default function PlanList() {
   const prevMonth = () => setCurrentMonth(currentMonth.subtract(1, 'month'));
   const nextMonth = () => setCurrentMonth(currentMonth.add(1, 'month'));
 
-  const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
-  const hasTomorrowPlan = plans.some(p => p.date === tomorrow);
-
   return (
     <div className="page">
       <div className="page-header">
         <h1>计划列表</h1>
-        {!hasTomorrowPlan && (
-          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-            + 创建明日计划
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={() => {
+          setCreatePlanDate(dayjs().add(1, 'day').format('YYYY-MM-DD'));
+          setShowCreateModal(true);
+        }}>
+          + 新建计划
+        </button>
       </div>
 
       <div className="calendar-header">
@@ -348,44 +527,159 @@ export default function PlanList() {
       </div>
 
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal modal-fullscreen" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>创建明日计划</h2>
-              <button onClick={() => setShowCreateModal(false)}>×</button>
+              <h2>新建计划 - {createPlanDate}</h2>
+              <button className="modal-close" onClick={() => { setShowCreateModal(false); setSelectedStrategyIds([]); setStrategyStocks([]); }}>×</button>
             </div>
 
-            <div className="modal-body">
-              <p className="modal-hint">选择策略，系统将自动生成候选股票和买卖思路</p>
-
-              <div className="strategy-select-list">
-                {strategies.map(strategy => (
-                  <div
-                    key={strategy.id}
-                    className={`strategy-select-item ${selectedStrategyIds.includes(strategy.id) ? 'selected' : ''}`}
-                    onClick={() => toggleStrategy(strategy.id)}
-                  >
-                    <div className="strategy-check">
-                      {selectedStrategyIds.includes(strategy.id) && '✓'}
-                    </div>
-                    <div className="strategy-info">
-                      <div className="strategy-name">{strategy.name}</div>
-                      {strategy.description && <div className="strategy-desc">{strategy.description}</div>}
-                      {strategy.stock_selection_logic && (
-                        <div className="strategy-logic">{strategy.stock_selection_logic}</div>
-                      )}
-                      <div className="strategy-params">
-                        <span>仓位: {strategy.position_size}%</span>
-                        <span>止损: {strategy.stop_loss}%</span>
-                      </div>
-                    </div>
+            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">📊 通用关注指标</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {['涨停数量', '跌停数量', '上涨家数', '下跌家数', '连板数量', '首板数量', '昨日涨停表现', '成交额'].map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '16px',
+                          background: createWatchIndicators.includes(item) ? '#3b82f6' : '#f1f5f9',
+                          color: createWatchIndicators.includes(item) ? 'white' : '#475569',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                        onClick={() => setCreateWatchIndicators(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}
+                      >
+                        {item}
+                      </span>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                <div className="form-section">
+                  <div className="form-section-title">📰 关注消息</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {['政策消息', '行业公告', '个股公告', '外围市场', '龙虎榜数据'].map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '16px',
+                          background: createWatchMessages.includes(item) ? '#3b82f6' : '#f1f5f9',
+                          color: createWatchMessages.includes(item) ? 'white' : '#475569',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                        onClick={() => setCreateWatchMessages(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">🎯 选择策略</div>
+                  <div className="strategy-select-list" style={{ marginTop: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                    {strategies.map(strategy => (
+                      <div
+                        key={strategy.id}
+                        className={`strategy-select-item ${selectedStrategyIds.includes(strategy.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (selectedStrategyIds.includes(strategy.id)) {
+                            toggleStrategy(strategy.id);
+                            setStrategyStocks(prev => prev.filter(s => s.strategyId !== strategy.id));
+                          } else {
+                            toggleStrategy(strategy.id);
+                            setStrategyStocks(prev => [...prev, { strategyId: strategy.id, strategyName: strategy.name, stocks: [], selectedStocks: [], scanning: false }]);
+                          }
+                        }}
+                      >
+                        <div className="strategy-check">
+                          {selectedStrategyIds.includes(strategy.id) && '✓'}
+                        </div>
+                        <div className="strategy-info">
+                          <div className="strategy-name">{strategy.name}</div>
+                          {strategy.description && <div className="strategy-desc">{strategy.description}</div>}
+                          <div className="strategy-params">
+                            <span>仓位: {strategy.position_size}%</span>
+                            <span>止损: {strategy.stop_loss}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">📈 策略选股</div>
+                  {selectedStrategyIds.length === 0 ? (
+                    <div style={{ color: '#94a3b8', padding: '20px', textAlign: 'center' }}>请先选择中间列的策略</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+                      {selectedStrategyIds.map(strategyId => {
+                        const strategyStock = strategyStocks.find(s => s.strategyId === strategyId);
+                        const strategy = strategies.find(s => s.id === strategyId);
+                        return (
+                          <div key={strategyId} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ fontWeight: '600' }}>{strategy?.name}</span>
+                              <button
+                                className="btn btn-secondary"
+                                style={{ padding: '4px 12px', fontSize: '12px' }}
+                                onClick={() => scanStrategyStocks(strategyId, strategy?.name || '')}
+                                disabled={strategyStock?.scanning}
+                              >
+                                {strategyStock?.scanning ? '扫描中...' : '🔍 扫描股票'}
+                              </button>
+                            </div>
+                            {strategyStock && strategyStock.stocks.length > 0 && (
+                              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {strategyStock.stocks.slice(0, 8).map((stock, idx) => (
+                                  <div
+                                    key={stock.code}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '6px 8px',
+                                      background: strategyStock.selectedStocks.includes(stock.code) ? '#dbeafe' : 'transparent',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => toggleStockSelection(strategyId, stock.code)}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={strategyStock.selectedStocks.includes(stock.code)}
+                                      onChange={() => {}}
+                                    />
+                                    <span style={{ flex: 1 }}>{stock.code} {stock.name}</span>
+                                    <span style={{ color: stock.score >= 70 ? '#16a34a' : stock.score >= 50 ? '#ca8a04' : '#94a3b8', fontWeight: '500' }}>
+                                      {stock.score}分
+                                    </span>
+                                    <span style={{ fontSize: '12px', color: '#64748b' }}>[{stock.entry_advice?.signal}]</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button className="btn" onClick={() => setShowCreateModal(false)}>取消</button>
+              <button className="btn" onClick={() => { setShowCreateModal(false); setSelectedStrategyIds([]); setStrategyStocks([]); }}>取消</button>
               <button
                 className="btn btn-primary"
                 onClick={handleCreatePlan}
@@ -400,105 +694,265 @@ export default function PlanList() {
 
       {showEditModal && editingPlan && (
         <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal plan-edit-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-fullscreen" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>编辑计划 - {editingPlan.trade_date}</h2>
-              <button onClick={() => setShowEditModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
             </div>
 
-            <div className="modal-body">
-              <div className="edit-section">
-                <h4>候选股票</h4>
-                <div className="candidate-stocks-list">
-                  {candidateStocksEdit.map((stock, index) => (
-                    <div key={index} className="candidate-stock-item">
-                      <div className="stock-row">
-                        <input
-                          type="text"
-                          placeholder="股票代码"
-                          value={stock.code}
-                          onChange={(e) => updateCandidateStock(index, 'code', e.target.value)}
-                        />
-                        <input
-                          type="text"
-                          placeholder="股票名称"
-                          value={stock.name}
-                          onChange={(e) => updateCandidateStock(index, 'name', e.target.value)}
-                        />
-                        <button className="btn-icon" onClick={() => removeCandidateStock(index)}>×</button>
-                      </div>
-                      <div className="reason-row">
-                        <input
-                          type="text"
-                          placeholder="买入理由"
-                          value={stock.buy_reason}
-                          onChange={(e) => updateCandidateStock(index, 'buy_reason', e.target.value)}
-                        />
-                      </div>
-                      <div className="reason-row">
-                        <input
-                          type="text"
-                          placeholder="卖出理由"
-                          value={stock.sell_reason}
-                          onChange={(e) => updateCandidateStock(index, 'sell_reason', e.target.value)}
-                        />
-                      </div>
+            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">📊 通用关注指标</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {['涨停数量', '跌停数量', '上涨家数', '下跌家数', '连板数量', '首板数量', '昨日涨停表现', '成交额'].map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '16px',
+                          background: editingPlan.watch_indicators?.includes(item) ? '#3b82f6' : '#f1f5f9',
+                          color: editingPlan.watch_indicators?.includes(item) ? 'white' : '#475569',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                        onClick={() => {
+                          const current = editingPlan.watch_indicators?.split(',').filter(Boolean) || [];
+                          const updated = current.includes(item) ? current.filter(i => i !== item) : [...current, item];
+                          setEditingPlan({ ...editingPlan, watch_indicators: updated.join(',') });
+                        }}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <div className="form-section-title">📰 关注消息</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {['政策消息', '行业公告', '个股公告', '外围市场', '龙虎榜数据'].map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: '16px',
+                          background: editingPlan.watch_messages?.includes(item) ? '#3b82f6' : '#f1f5f9',
+                          color: editingPlan.watch_messages?.includes(item) ? 'white' : '#475569',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                        onClick={() => {
+                          const current = editingPlan.watch_messages?.split(',').filter(Boolean) || [];
+                          const updated = current.includes(item) ? current.filter(i => i !== item) : [...current, item];
+                          setEditingPlan({ ...editingPlan, watch_messages: updated.join(',') });
+                        }}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <div className="form-section-title">📝 计划信息</div>
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>市场情绪</label>
+                      <input
+                        type="text"
+                        value={editingPlan.sentiment || ''}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, sentiment: e.target.value })}
+                        placeholder="如：分歧、看多、看空"
+                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                      />
                     </div>
-                  ))}
-                  <button className="btn btn-secondary" onClick={addCandidateStock}>
-                    + 添加候选股票
-                  </button>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>外部信号</label>
+                      <input
+                        type="text"
+                        value={editingPlan.external_signals || ''}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, external_signals: e.target.value })}
+                        placeholder="如：美股走势、重大政策"
+                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>计划依据</label>
+                      <textarea
+                        value={editingPlan.plan_basis || ''}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, plan_basis: e.target.value })}
+                        placeholder="制定计划的依据"
+                        rows={3}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', resize: 'vertical' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>买入条件</label>
+                      <textarea
+                        value={editingPlan.entry_condition || ''}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, entry_condition: e.target.value })}
+                        placeholder="什么条件下买入"
+                        rows={2}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', resize: 'vertical' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>卖出条件</label>
+                      <textarea
+                        value={editingPlan.exit_condition || ''}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, exit_condition: e.target.value })}
+                        placeholder="什么条件下卖出"
+                        rows={2}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', resize: 'vertical' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="edit-section">
-                <label>市场情绪</label>
-                <input
-                  type="text"
-                  value={editingPlan.sentiment || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, sentiment: e.target.value })}
-                  placeholder="如：分歧、看多、看空"
-                />
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">🎯 选择策略</div>
+                  <div className="strategy-select-list" style={{ marginTop: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                    {strategies.map(strategy => (
+                      <div
+                        key={strategy.id}
+                        className={`strategy-select-item ${editingStrategyIds.includes(strategy.id) ? 'selected' : ''}`}
+                        onClick={() => toggleEditingStrategy(strategy.id)}
+                      >
+                        <div className="strategy-check">
+                          {editingStrategyIds.includes(strategy.id) && '✓'}
+                        </div>
+                        <div className="strategy-info">
+                          <div className="strategy-name">{strategy.name}</div>
+                          {strategy.description && <div className="strategy-desc">{strategy.description}</div>}
+                          <div className="strategy-params">
+                            <span>仓位: {strategy.position_size}%</span>
+                            <span>止损: {strategy.stop_loss}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="edit-section">
-                <label>外部信号</label>
-                <input
-                  type="text"
-                  value={editingPlan.external_signals || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, external_signals: e.target.value })}
-                  placeholder="如：美股走势、重大政策"
-                />
-              </div>
+              <div>
+                <div className="form-section">
+                  <div className="form-section-title">📈 策略选股</div>
+                  {editingStrategyIds.length === 0 ? (
+                    <div style={{ color: '#94a3b8', padding: '20px', textAlign: 'center' }}>请先选择中间列的策略</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+                      {editingStrategyIds.map(strategyId => {
+                        const strategyStock = editingStrategyStocks.find(s => s.strategyId === strategyId);
+                        const strategy = strategies.find(s => s.id === strategyId);
+                        return (
+                          <div key={strategyId} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ fontWeight: '600' }}>{strategy?.name}</span>
+                              <button
+                                className="btn btn-secondary"
+                                style={{ padding: '4px 12px', fontSize: '12px' }}
+                                onClick={() => scanEditingStrategyStocks(strategyId, strategy?.name || '')}
+                                disabled={strategyStock?.scanning}
+                              >
+                                {strategyStock?.scanning ? '扫描中...' : '🔍 扫描股票'}
+                              </button>
+                            </div>
+                            {strategyStock && strategyStock.stocks.length > 0 && (
+                              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                {strategyStock.stocks.slice(0, 8).map((stock, idx) => (
+                                  <div
+                                    key={stock.code}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '6px 8px',
+                                      background: strategyStock.selectedStocks.includes(stock.code) ? '#dbeafe' : 'transparent',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => toggleEditingStockSelection(strategyId, stock.code)}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={strategyStock.selectedStocks.includes(stock.code)}
+                                      onChange={() => {}}
+                                    />
+                                    <span style={{ flex: 1 }}>{stock.code} {stock.name}</span>
+                                    <span style={{ color: stock.score >= 70 ? '#16a34a' : stock.score >= 50 ? '#ca8a04' : '#94a3b8', fontWeight: '500' }}>
+                                      {stock.score}分
+                                    </span>
+                                    <span style={{ fontSize: '12px', color: '#64748b' }}>[{stock.entry_advice?.signal}]</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-              <div className="edit-section">
-                <label>计划依据</label>
-                <textarea
-                  value={editingPlan.plan_basis || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, plan_basis: e.target.value })}
-                  placeholder="制定计划的依据"
-                  rows={3}
-                />
-              </div>
-
-              <div className="edit-section">
-                <label>买入条件</label>
-                <textarea
-                  value={editingPlan.entry_condition || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, entry_condition: e.target.value })}
-                  placeholder="什么条件下买入"
-                  rows={2}
-                />
-              </div>
-
-              <div className="edit-section">
-                <label>卖出条件</label>
-                <textarea
-                  value={editingPlan.exit_condition || ''}
-                  onChange={(e) => setEditingPlan({ ...editingPlan, exit_condition: e.target.value })}
-                  placeholder="什么条件下卖出"
-                  rows={2}
-                />
+                <div className="form-section">
+                  <div className="form-section-title">📈 候选股票</div>
+                  <div style={{ marginTop: '12px' }}>
+                    {candidateStocksEdit.length === 0 ? (
+                      <div style={{ color: '#94a3b8', padding: '20px', textAlign: 'center' }}>暂无候选股票</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                        {candidateStocksEdit.map((stock, index) => (
+                          <div key={index} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                              <input
+                                type="text"
+                                placeholder="股票代码"
+                                value={stock.code}
+                                onChange={(e) => updateCandidateStock(index, 'code', e.target.value)}
+                                style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                              />
+                              <input
+                                type="text"
+                                placeholder="股票名称"
+                                value={stock.name}
+                                onChange={(e) => updateCandidateStock(index, 'name', e.target.value)}
+                                style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                              />
+                              <button
+                                className="btn-icon"
+                                onClick={() => removeCandidateStock(index)}
+                                style={{ padding: '6px 10px', background: '#fee2e2', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#dc2626' }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="买入理由"
+                              value={stock.buy_reason}
+                              onChange={(e) => updateCandidateStock(index, 'buy_reason', e.target.value)}
+                              style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', marginBottom: '4px' }}
+                            />
+                            <input
+                              type="text"
+                              placeholder="卖出理由"
+                              value={stock.sell_reason}
+                              onChange={(e) => updateCandidateStock(index, 'sell_reason', e.target.value)}
+                              style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button className="btn btn-secondary" onClick={addCandidateStock} style={{ marginTop: '12px' }}>
+                      + 添加候选股票
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
