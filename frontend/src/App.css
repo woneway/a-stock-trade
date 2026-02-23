@@ -726,6 +726,11 @@ td .number {
   animation: fadeIn 0.2s ease-out;
 }
 
+.modal-overlay:has(.modal-fullscreen) {
+  display: block;
+  background: rgba(26, 27, 46, 0.5);
+}
+
 .modal {
   background: var(--bg-card);
   border-radius: 20px;
@@ -2469,7 +2474,7 @@ td .number {
 }
 
 .modal-fullscreen {
-  position: fixed;
+  position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
@@ -2478,11 +2483,15 @@ td .number {
   height: 100vh !important;
   max-width: 100vw !important;
   max-height: 100vh !important;
-  border-radius: 0;
-  margin: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: white !important;
+  box-shadow: none !important;
+  animation: none !important;
 }
 
 .modal-fullscreen .modal-body {
@@ -2515,6 +2524,22 @@ td .number {
   justify-content: flex-end;
   gap: 12px;
   background: var(--gray-100);
+}
+
+.modal-fullscreen .modal-footer .btn {
+  background: var(--gray-200);
+  color: var(--text-primary);
+  padding: 10px 20px;
+}
+
+.modal-fullscreen .modal-footer .btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+}
+
+.modal-fullscreen .modal-footer .btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
 }
 
 @media (max-width: 1200px) {
