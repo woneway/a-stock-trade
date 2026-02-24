@@ -2688,6 +2688,9 @@ td .number {
 /* 今日计划页面 */
 .plan-section {
   margin-bottom: 24px;
+  background: var(--gray-100);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .plan-section h3 {
@@ -2695,6 +2698,145 @@ td .number {
   font-weight: 600;
   margin-bottom: 12px;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.indicator-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.indicator-tags .tag {
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: white;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--gray-200);
+}
+
+.indicator-tags .tag:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.indicator-tags .tag.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.candidate-pool {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  border: 1px solid var(--gray-200);
+}
+
+.candidate-pool h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.stock-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--gray-100);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.stock-item:hover {
+  background: var(--primary-light);
+}
+
+.stock-item.selected {
+  background: #dbeafe;
+  border: 1px solid var(--primary);
+}
+
+.stock-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-200);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stock-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.stock-score {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stock-score.high {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.stock-score.mid {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.stock-score.low {
+  background: var(--gray-200);
+  color: var(--gray-600);
+}
+
+.stock-advice {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.strategy-params {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #bae6fd;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.strategy-params > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.strategy-params strong {
+  color: #0369a1;
+  font-weight: 600;
 }
 
 .market-grid {
