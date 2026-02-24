@@ -39,6 +39,15 @@ interface Strategy {
   iteration_history?: string;
   created_at: string;
   updated_at: string;
+  trade_mode?: string;
+  mode_description?: string;
+  position_rising?: number;
+  position_consolidation?: number;
+  position_decline?: number;
+  position_chaos?: number;
+  timing_pattern?: string;
+  scenario_handling?: string;
+  discipline?: string;
 }
 
 interface StrategyForm {
@@ -76,6 +85,15 @@ interface StrategyForm {
   position_size: number;
   is_active?: boolean;
   iteration_history?: string;
+  trade_mode?: string;
+  mode_description?: string;
+  position_rising?: number;
+  position_consolidation?: number;
+  position_decline?: number;
+  position_chaos?: number;
+  timing_pattern?: string;
+  scenario_handling?: string;
+  discipline?: string;
 }
 
 // 选股相关类型
@@ -149,6 +167,15 @@ export default function Strategy() {
     position_size: 20,
     is_active: true,
     iteration_history: '',
+    trade_mode: '',
+    mode_description: '',
+    position_rising: 50,
+    position_consolidation: 30,
+    position_decline: 10,
+    position_chaos: 20,
+    timing_pattern: '',
+    scenario_handling: '',
+    discipline: '',
   });
 
   useEffect(() => {
@@ -216,6 +243,15 @@ export default function Strategy() {
       max_drawdown_target: strategy.max_drawdown_target,
       stop_loss: strategy.stop_loss,
       position_size: strategy.position_size,
+      trade_mode: strategy.trade_mode || '',
+      mode_description: strategy.mode_description || '',
+      position_rising: strategy.position_rising ?? 50,
+      position_consolidation: strategy.position_consolidation ?? 30,
+      position_decline: strategy.position_decline ?? 10,
+      position_chaos: strategy.position_chaos ?? 20,
+      timing_pattern: strategy.timing_pattern || '',
+      scenario_handling: strategy.scenario_handling || '',
+      discipline: strategy.discipline || '',
     });
     setEditingStrategy(null);
     setShowModal(true);
@@ -262,6 +298,15 @@ export default function Strategy() {
       position_size: 20,
       is_active: true,
       iteration_history: '',
+      trade_mode: '',
+      mode_description: '',
+      position_rising: 50,
+      position_consolidation: 30,
+      position_decline: 10,
+      position_chaos: 20,
+      timing_pattern: '',
+      scenario_handling: '',
+      discipline: '',
     });
     setShowModal(true);
   };
@@ -303,21 +348,49 @@ export default function Strategy() {
       position_size: strategy.position_size,
       is_active: strategy.is_active,
       iteration_history: strategy.iteration_history || '',
+      trade_mode: strategy.trade_mode || '',
+      mode_description: strategy.mode_description || '',
+      position_rising: strategy.position_rising ?? 50,
+      position_consolidation: strategy.position_consolidation ?? 30,
+      position_decline: strategy.position_decline ?? 10,
+      position_chaos: strategy.position_chaos ?? 20,
+      timing_pattern: strategy.timing_pattern || '',
+      scenario_handling: strategy.scenario_handling || '',
+      discipline: strategy.discipline || '',
     });
     setShowModal(true);
   };
 
   const handleSubmit = async () => {
+    if (!formData.name || formData.name.trim() === '') {
+      alert('请输入策略名称');
+      return;
+    }
     try {
+      const data: Record<string, unknown> = {};
+      Object.keys(formData).forEach(key => {
+        const value = formData[key as keyof typeof formData];
+        if (value === '' || value === undefined) {
+          data[key] = null;
+        } else if (value === null) {
+          data[key] = null;
+        } else {
+          data[key] = value;
+        }
+      });
+      data.stop_loss = typeof data.stop_loss === 'number' ? data.stop_loss : 6;
+      data.position_size = typeof data.position_size === 'number' ? data.position_size : 20;
       if (editingStrategy) {
-        await axios.put(`/api/strategies/${editingStrategy.id}`, formData);
+        await axios.put(`/api/strategies/${editingStrategy.id}`, data);
       } else {
-        await axios.post('/api/strategies', formData);
+        await axios.post('/api/strategies', data);
       }
       fetchStrategies();
       setShowModal(false);
+      alert(editingStrategy ? '策略更新成功' : '策略创建成功');
     } catch (err) {
       console.error('Failed to save strategy:', err);
+      alert('保存失败，请重试');
     }
   };
 
@@ -787,6 +860,105 @@ export default function Strategy() {
                   value={formData.iteration_history}
                   onChange={e => setFormData({...formData, iteration_history: e.target.value})}
                   placeholder="策略执行后的总结和反思，如: 2024-01: 首板成功率偏低，增加资金面过滤条件..."
+                  rows={3}
+                />
+              </div>
+              <div className="form-section-title">模式定位</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>交易模式</label>
+                  <select
+                    value={formData.trade_mode || ''}
+                    onChange={e => setFormData({...formData, trade_mode: e.target.value})}
+                  >
+                    <option value="">选择模式</option>
+                    <option value="首板">首板</option>
+                    <option value="接力">接力</option>
+                    <option value="反包">反包</option>
+                    <option value="趋势">趋势</option>
+                    <option value="低吸">低吸</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>模式描述</label>
+                  <textarea
+                    value={formData.mode_description || ''}
+                    onChange={e => setFormData({...formData, mode_description: e.target.value})}
+                    placeholder="模式的核心逻辑和特点"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div className="form-section-title">情绪周期仓位</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>上升期 (%)</label>
+                  <input
+                    type="number"
+                    value={formData.position_rising ?? 50}
+                    onChange={e => setFormData({...formData, position_rising: parseFloat(e.target.value)})}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>震荡期 (%)</label>
+                  <input
+                    type="number"
+                    value={formData.position_consolidation ?? 30}
+                    onChange={e => setFormData({...formData, position_consolidation: parseFloat(e.target.value)})}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>下降期 (%)</label>
+                  <input
+                    type="number"
+                    value={formData.position_decline ?? 10}
+                    onChange={e => setFormData({...formData, position_decline: parseFloat(e.target.value)})}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>混沌期 (%)</label>
+                  <input
+                    type="number"
+                    value={formData.position_chaos ?? 20}
+                    onChange={e => setFormData({...formData, position_chaos: parseFloat(e.target.value)})}
+                    min={0}
+                    max={100}
+                  />
+                </div>
+              </div>
+              <div className="form-section-title">介入时机</div>
+              <div className="form-group">
+                <label>时机模式</label>
+                <textarea
+                  value={formData.timing_pattern || ''}
+                  onChange={e => setFormData({...formData, timing_pattern: e.target.value})}
+                  placeholder="如何判断最佳介入时机，如: 首次放量涨停板，板上吃货"
+                  rows={2}
+                />
+              </div>
+              <div className="form-section-title">场景应对</div>
+              <div className="form-group">
+                <label>不同市场环境的应对策略</label>
+                <textarea
+                  value={formData.scenario_handling || ''}
+                  onChange={e => setFormData({...formData, scenario_handling: e.target.value})}
+                  placeholder="如: 大盘暴跌时空仓防守，大盘横盘时小仓位试错"
+                  rows={3}
+                />
+              </div>
+              <div className="form-section-title">执行纪律</div>
+              <div className="form-group">
+                <label>必须遵守的交易纪律</label>
+                <textarea
+                  value={formData.discipline || ''}
+                  onChange={e => setFormData({...formData, discipline: e.target.value})}
+                  placeholder="如: 亏损5%无条件止损，单日亏损10%停止交易"
                   rows={3}
                 />
               </div>

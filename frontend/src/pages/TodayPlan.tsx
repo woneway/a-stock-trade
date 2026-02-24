@@ -10,6 +10,28 @@ interface CandidateStock {
   priority: number;
   strategy_id?: number;
   strategy_name?: string;
+  // 策略信息
+  trade_mode?: string;
+  entry_condition?: string;
+  stop_loss?: number;
+  take_profit_1?: number;
+  take_profit_2?: number;
+  scenario_handling?: {
+    break_up?: string;
+    high_open_down?: string;
+    volume_stagnant?: string;
+    news_impact?: string;
+    dragon_first_yin?: string;
+    sector_divide?: string;
+  };
+  discipline?: {
+    only_mode?: boolean;
+    no_forcing?: boolean;
+    cut_loss?: boolean;
+    ignore_rumors?: boolean;
+    stay_focused?: boolean;
+    notes?: string;
+  };
 }
 
 interface PrePlan {
@@ -421,6 +443,7 @@ export default function TodayPlan() {
                               <div className="candidate-header">
                                 <span className="stock-name">{stock.name}</span>
                                 <span className="stock-code">{stock.code}</span>
+                                {stock.trade_mode && <span className="mode-tag">{stock.trade_mode}</span>}
                               </div>
                               <div className="candidate-reason">
                                 <span className="reason-label">买:</span> {stock.buy_reason}
@@ -428,6 +451,31 @@ export default function TodayPlan() {
                               {stock.sell_reason && (
                                 <div className="candidate-reason">
                                   <span className="reason-label">卖:</span> {stock.sell_reason}
+                                </div>
+                              )}
+                              {stock.entry_condition && (
+                                <div className="candidate-meta">
+                                  买入条件: {stock.entry_condition}
+                                </div>
+                              )}
+                              {(stock.stop_loss || stock.take_profit_1) && (
+                                <div className="candidate-meta">
+                                  止损: {stock.stop_loss || '-'}% | 止盈1: {stock.take_profit_1 || '-'}%
+                                </div>
+                              )}
+                              {stock.scenario_handling && (
+                                <div className="candidate-scenario">
+                                  <span className="scenario-label">场景:</span>
+                                  {stock.scenario_handling.break_up && <span className="scenario-tag">炸板→{stock.scenario_handling.break_up}</span>}
+                                  {stock.scenario_handling.high_open_down && <span className="scenario-tag">高开低走→{stock.scenario_handling.high_open_down}</span>}
+                                </div>
+                              )}
+                              {stock.discipline && (
+                                <div className="candidate-discipline">
+                                  <span className="discipline-label">纪律:</span>
+                                  {stock.discipline.only_mode && <span className="discipline-tag">只做模式</span>}
+                                  {stock.discipline.cut_loss && <span className="discipline-tag">错了就跑</span>}
+                                  {stock.discipline.no_forcing && <span className="discipline-tag">不强做</span>}
                                 </div>
                               )}
                             </div>

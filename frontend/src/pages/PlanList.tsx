@@ -6,12 +6,53 @@ interface Strategy {
   id: number;
   name: string;
   description?: string;
+  // 1. 模式定位
+  trade_mode?: string;
+  mode_description?: string;
+  // 2. 情绪周期仓位
+  position_rising?: number;
+  position_consolidation?: number;
+  position_decline?: number;
+  position_chaos?: number;
+  // 3. 选股标准
   stock_selection_logic?: string;
+  watch_signals?: string;
+  // 4. 介入时机
   entry_condition?: string;
+  timing_pattern?: string;
+  // 5. 卖出策略
   exit_condition?: string;
+  position_condition?: string;
+  // 止盈止损
+  take_profit_1?: number;
+  take_profit_2?: number;
+  trailing_stop?: number;
+  // 仓位管理
+  max_positions?: number;
+  min_single_position?: number;
+  max_single_position?: number;
+  // 风控
   stop_loss: number;
   position_size: number;
   is_active: boolean;
+  // 7. 场景应对
+  scenario_handling?: {
+    break_up?: string;
+    high_open_down?: string;
+    volume_stagnant?: string;
+    news_impact?: string;
+    dragon_first_yin?: string;
+    sector_divide?: string;
+  };
+  // 8. 执行纪律
+  discipline?: {
+    only_mode?: boolean;
+    no_forcing?: boolean;
+    cut_loss?: boolean;
+    ignore_rumors?: boolean;
+    stay_focused?: boolean;
+    notes?: string;
+  };
 }
 
 interface CandidateStock {

@@ -646,10 +646,10 @@ td .number {
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-weight: 600;
-  font-size: 14px;
-  color: var(--text-primary);
+  font-size: 13px;
+  color: #4b5563;
 }
 
 .form-group .input-wrapper {
@@ -683,6 +683,7 @@ td .number {
   transition: var(--transition);
   background: #fff;
   font-family: inherit;
+  color: #1f2937;
 }
 
 .form-group input:focus,
@@ -2670,10 +2671,48 @@ td .number {
 }
 
 .form-section-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 12px;
+  margin-top: 20px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 3px solid #4f46e5;
+  border-radius: 4px;
+}
+
+.discipline-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.discipline-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.discipline-item:hover {
+  background: var(--bg-hover);
+}
+
+.discipline-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.discipline-item span {
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 .strategy-select-item {
@@ -3716,6 +3755,17 @@ td .number {
   padding: 2px 8px;
   border-radius: 4px;
   margin-left: 8px;
+}
+
+.mode-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
 }
 
 .status-badge.active {
@@ -4961,6 +5011,64 @@ td .number {
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: 4px;
+}
+
+.candidate-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 4px;
+}
+
+.candidate-scenario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.candidate-scenario .scenario-label {
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.candidate-scenario .scenario-tag {
+  padding: 2px 6px;
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+  border-radius: 4px;
+}
+
+.candidate-discipline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.candidate-discipline .discipline-label {
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.candidate-discipline .discipline-tag {
+  padding: 2px 6px;
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border-radius: 4px;
+}
+
+.mode-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
+  border-radius: 4px;
+  margin-left: 8px;
 }
 
 .reason-label {
