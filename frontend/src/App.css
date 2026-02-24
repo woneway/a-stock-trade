@@ -3330,6 +3330,21 @@ td .number {
   color: var(--success);
 }
 
+.status-tag.bought {
+  background: rgba(76, 175, 80, 0.15);
+  color: #16a34a;
+}
+
+.status-tag.abandoned {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+.btn-action.abandon {
+  background: #6b7280;
+  color: white;
+}
+
 .action-btns {
   display: flex;
   gap: 6px;

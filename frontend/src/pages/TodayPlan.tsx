@@ -49,12 +49,28 @@ const DEFAULT_MESSAGES = [
   '政策消息', '行业公告', '个股公告', '外围市场', '龙虎榜数据',
 ];
 
+interface StockStatus {
+  code: string;
+  status: 'pending' | 'bought' | 'abandoned';
+  price?: number;
+  quantity?: number;
+}
+
 export default function TodayPlan() {
   const [activeTab, setActiveTab] = useState<'pre' | 'in' | 'post'>('pre');
   const [todayPlan, setTodayPlan] = useState<PrePlan | null>(null);
   const [candidateStocks, setCandidateStocks] = useState<CandidateStock[]>([]);
+  const [stockStatuses, setStockStatuses] = useState<Record<string, StockStatus>>({});
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [postReview, setPostReview] = useState({
+    sentiment_record: '',
+    mistake_record: '',
+    insights: '',
+    tomorrow_plan: '',
+  });
+  const [savingReview, setSavingReview] = useState(false);
 
   const today = dayjs().format('YYYY-MM-DD');
 
@@ -98,6 +114,51 @@ export default function TodayPlan() {
       console.error('Failed to load trades:', err);
     }
   };
+
+  const loadPostReview = async () => {
+    try {
+      const res = await axios.get('/api/plan/post', { params: { trade_date: today } });
+      if (res.data) {
+        setPostReview({
+          sentiment_record: res.data.sentiment_record || '',
+          mistake_record: res.data.mistake_record || '',
+          insights: res.data.insights || '',
+          tomorrow_plan: res.data.tomorrow_plan || '',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load post review:', err);
+    }
+  };
+
+  const savePostReview = async () => {
+    setSavingReview(true);
+    try {
+      await axios.put('/api/plan/post', {
+        trade_date: today,
+        ...postReview,
+      });
+      alert('复盘已保存');
+    } catch (err) {
+      console.error('Failed to save post review:', err);
+      alert('保存失败');
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
+  const updateStockStatus = (code: string, status: 'pending' | 'bought' | 'abandoned', price?: number, quantity?: number) => {
+    setStockStatuses(prev => ({
+      ...prev,
+      [code]: { code, status, price, quantity }
+    }));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'post') {
+      loadPostReview();
+    }
+  }, [activeTab]);
 
   const watchIndicators = todayPlan?.watch_indicators?.split(',').filter(Boolean) || [];
   const watchMessages = todayPlan?.watch_messages?.split(',').filter(Boolean) || [];
@@ -309,7 +370,7 @@ export default function TodayPlan() {
             {activeTab === 'in' && (
               <div className="in-market">
                 <div className="candidate-section">
-                  <h3>📈 候选股票池</h3>
+                  <h3>📈 候选股票池 - 盘中执行</h3>
                   {candidateStocks.length === 0 ? (
                     <div className="empty-tip">暂无候选股票</div>
                   ) : (
@@ -324,7 +385,9 @@ export default function TodayPlan() {
                           </tr>
                         </thead>
                         <tbody>
-                          {candidateStocks.map((stock, idx) => (
+                          {candidateStocks.map((stock, idx) => {
+                            const status = stockStatuses[stock.code]?.status || 'pending';
+                            return (
                             <tr key={idx}>
                               <td>
                                 <div className="stock-cell">
@@ -333,12 +396,58 @@ export default function TodayPlan() {
                                 </div>
                               </td>
                               <td className="reason-cell">{stock.buy_reason}</td>
-                              <td><span className="status-tag pending">待买</span></td>
                               <td>
-                                <button className="btn-action buy">买入</button>
+                                <span className={`status-tag ${status}`}>
+                                  {status === 'pending' ? '待买' : status === 'bought' ? '已买' : '放弃'}
+                                </span>
+                              </td>
+                              <td style={{ display: 'flex', gap: '4px' }}>
+                                {status === 'pending' && (
+                                  <>
+                                    <button 
+                                      className="btn-action buy" 
+                                      onClick={() => {
+                                        const price = prompt('请输入买入价格:');
+                                        if (price) {
+                                          updateStockStatus(stock.code, 'bought', parseFloat(price), 100);
+                                        }
+                                      }}
+                                    >
+                                      买入
+                                    </button>
+                                    <button 
+                                      className="btn-action abandon"
+                                      onClick={() => updateStockStatus(stock.code, 'abandoned')}
+                                    >
+                                      放弃
+                                    </button>
+                                  </>
+                                )}
+                                {status === 'bought' && (
+                                  <button 
+                                    className="btn-action sell"
+                                    onClick={() => {
+                                      const price = prompt('请输入卖出价格:');
+                                      if (price) {
+                                        updateStockStatus(stock.code, 'abandoned');
+                                      }
+                                    }}
+                                  >
+                                    卖出
+                                  </button>
+                                )}
+                                {status === 'abandoned' && (
+                                  <button 
+                                    className="btn-action"
+                                    onClick={() => updateStockStatus(stock.code, 'pending')}
+                                    style={{ fontSize: '11px', padding: '4px 8px' }}
+                                  >
+                                    恢复
+                                  </button>
+                                )}
                               </td>
                             </tr>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
@@ -419,21 +528,47 @@ export default function TodayPlan() {
                   <div className="review-form">
                     <div className="form-group">
                       <label>🌡️ 情绪记录</label>
-                      <textarea placeholder="今日情绪波动: 开盘..." rows={2} />
+                      <textarea 
+                        placeholder="今日情绪波动: 开盘..."
+                        rows={2}
+                        value={postReview.sentiment_record}
+                        onChange={(e) => setPostReview({ ...postReview, sentiment_record: e.target.value })}
+                      />
                     </div>
                     <div className="form-group">
                       <label>❌ 失误记录</label>
-                      <textarea placeholder="1. ...&#10;2. ..." rows={3} />
+                      <textarea 
+                        placeholder="1. ...&#10;2. ..."
+                        rows={3}
+                        value={postReview.mistake_record}
+                        onChange={(e) => setPostReview({ ...postReview, mistake_record: e.target.value })}
+                      />
                     </div>
                     <div className="form-group">
                       <label>💡 心得体会</label>
-                      <textarea placeholder="..." rows={3} />
+                      <textarea 
+                        placeholder="..."
+                        rows={3}
+                        value={postReview.insights}
+                        onChange={(e) => setPostReview({ ...postReview, insights: e.target.value })}
+                      />
                     </div>
                     <div className="form-group">
                       <label>🎯 明日计划</label>
-                      <textarea placeholder="1. ...&#10;2. ..." rows={3} />
+                      <textarea 
+                        placeholder="1. ...&#10;2. ..."
+                        rows={3}
+                        value={postReview.tomorrow_plan}
+                        onChange={(e) => setPostReview({ ...postReview, tomorrow_plan: e.target.value })}
+                      />
                     </div>
-                    <button className="btn btn-primary">保存复盘</button>
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={savePostReview}
+                      disabled={savingReview}
+                    >
+                      {savingReview ? '保存中...' : '保存复盘'}
+                    </button>
                   </div>
                 </div>
               </div>
