@@ -347,7 +347,7 @@ export default function PlanList() {
     const strategyIds: number[] = [];
     if (plan.prePlan.strategy_ids) {
       try {
-        let parsed = plan.prePlan.strategy_ids;
+        let parsed: string | string[] = plan.prePlan.strategy_ids;
         if (typeof parsed === 'string') {
           parsed = parsed.trim();
           if (parsed.startsWith('[')) {
@@ -391,7 +391,7 @@ export default function PlanList() {
       return { 
         strategyId: id, 
         strategyName: strategy?.name || `策略${id}`, 
-        stocks: existingStocks.map(s => ({ code: s.code, name: s.name, entry_advice: { signal: s.buy_reason } })), 
+        stocks: existingStocks.map(s => ({ code: s.code, name: s.name, score: 0, change: 0, limit_consecutive: 0, entry_advice: { signal: s.buy_reason } })), 
         selectedStocks: existingStocks.map(s => s.code), 
         scanning: false 
       };
@@ -515,7 +515,15 @@ export default function PlanList() {
         <div className="modal-overlay">
           <div className="modal modal-fullscreen" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>新建计划 - {createPlanDate}</h2>
+              <h2>新建计划 - 
+                <input 
+                  type="date" 
+                  value={createPlanDate}
+                  min={dayjs().format('YYYY-MM-DD')}
+                  onChange={(e) => setCreatePlanDate(e.target.value)}
+                  style={{ marginLeft: '12px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                />
+              </h2>
               <button className="modal-close" onClick={() => { setShowCreateModal(false); setSelectedStrategyIds([]); setStrategyStocks([]); }}>×</button>
             </div>
 
