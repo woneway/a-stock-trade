@@ -20,6 +20,9 @@ class PrePlan(SQLModel, table=True):
 
     plan_basis: Optional[str] = Field(default=None, alias="planBasis")
 
+    watch_indicators: Optional[str] = Field(default=None, alias="watchIndicators")
+    watch_messages: Optional[str] = Field(default=None, alias="watchMessages")
+
     stop_loss: Optional[float] = Field(default=None, alias="stopLoss")
     position_size: Optional[float] = Field(default=None, alias="positionSize")
     entry_condition: Optional[str] = Field(default=None, alias="entryCondition")

@@ -22,6 +22,8 @@ class PrePlanBase(BaseModel):
     sectors: Optional[str] = None
     candidate_stocks: Optional[str] = None
     plan_basis: Optional[str] = None
+    watch_indicators: Optional[str] = None
+    watch_messages: Optional[str] = None
 
     stop_loss: Optional[float] = None
     position_size: Optional[float] = None
@@ -46,6 +48,8 @@ class PrePlanUpdate(BaseModel):
     sectors: Optional[str] = None
     candidate_stocks: Optional[str] = None
     plan_basis: Optional[str] = None
+    watch_indicators: Optional[str] = None
+    watch_messages: Optional[str] = None
     stop_loss: Optional[float] = None
     position_size: Optional[float] = None
     entry_condition: Optional[str] = None

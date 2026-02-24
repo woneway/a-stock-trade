@@ -365,13 +365,7 @@ export default function PlanList() {
     }
     setEditingStrategyIds(strategyIds);
 
-    const strategyStocksData = strategyIds.map(id => {
-      const strategy = strategies.find(s => s.id === id);
-      return { strategyId: id, strategyName: strategy?.name || `策略${id}`, stocks: [], selectedStocks: [], scanning: false };
-    });
-    setEditingStrategyStocks(strategyStocksData);
-
-    const stocks: CandidateStockInput[] = [];
+    let existingStocks: { code: string; name: string; buy_reason: string; sell_reason: string; priority: number }[] = [];
     if (plan.prePlan.candidate_stocks) {
       try {
         let parsed = plan.prePlan.candidate_stocks;
@@ -379,19 +373,30 @@ export default function PlanList() {
           parsed = JSON.parse(parsed);
         }
         if (Array.isArray(parsed)) {
-          stocks.push(...parsed.map((s: CandidateStock) => ({
+          existingStocks = parsed.map((s: CandidateStock) => ({
             code: s.code || '',
             name: s.name || '',
             buy_reason: s.buy_reason || '',
             sell_reason: s.sell_reason || '',
             priority: s.priority || 0,
-          })));
+          }));
         }
       } catch (e) {
         console.error('Failed to parse candidate_stocks:', e);
       }
     }
-    setCandidateStocksEdit(stocks);
+
+    const strategyStocksData = strategyIds.map(id => {
+      const strategy = strategies.find(s => s.id === id);
+      return { 
+        strategyId: id, 
+        strategyName: strategy?.name || `策略${id}`, 
+        stocks: existingStocks.map(s => ({ code: s.code, name: s.name, entry_advice: { signal: s.buy_reason } })), 
+        selectedStocks: existingStocks.map(s => s.code), 
+        scanning: false 
+      };
+    });
+    setEditingStrategyStocks(strategyStocksData);
     setShowEditModal(true);
   };
 
