@@ -74,6 +74,22 @@ export default function TodayPlan() {
   });
   const [savingReview, setSavingReview] = useState(false);
 
+  const [tradeModal, setTradeModal] = useState<{
+    show: boolean;
+    type: 'buy' | 'sell';
+    stock: CandidateStock | null;
+    price: string;
+    quantity: string;
+    loading: boolean;
+  }>({
+    show: false,
+    type: 'buy',
+    stock: null,
+    price: '',
+    quantity: '',
+    loading: false,
+  });
+
   const today = dayjs().format('YYYY-MM-DD');
 
   useEffect(() => {
@@ -146,6 +162,78 @@ export default function TodayPlan() {
       alert('保存失败');
     } finally {
       setSavingReview(false);
+    }
+  };
+
+  const openBuyModal = (stock: CandidateStock) => {
+    setTradeModal({
+      show: true,
+      type: 'buy',
+      stock,
+      price: '',
+      quantity: '',
+      loading: false,
+    });
+  };
+
+  const openSellModal = (stock: CandidateStock) => {
+    setTradeModal({
+      show: true,
+      type: 'sell',
+      stock,
+      price: '',
+      quantity: '',
+      loading: false,
+    });
+  };
+
+  const handleTrade = async () => {
+    if (!tradeModal.stock || !tradeModal.price || !tradeModal.quantity) {
+      alert('请填写价格和数量');
+      return;
+    }
+    const price = parseFloat(tradeModal.price);
+    const quantity = parseInt(tradeModal.quantity);
+    if (isNaN(price) || isNaN(quantity) || price <= 0 || quantity <= 0) {
+      alert('请输入有效的价格和数量');
+      return;
+    }
+
+    const amount = price * quantity;
+    const fee = amount * 0.0003;
+    const reason = tradeModal.type === 'buy' 
+      ? tradeModal.stock.buy_reason 
+      : tradeModal.stock.sell_reason || '手动卖出';
+
+    setTradeModal(prev => ({ ...prev, loading: true }));
+    try {
+      await axios.post('/api/trades', {
+        stock_code: tradeModal.stock.code,
+        stock_name: tradeModal.stock.name,
+        trade_type: tradeModal.type === 'buy' ? '买入' : '卖出',
+        price,
+        quantity,
+        amount,
+        fee,
+        reason,
+        trade_date: today,
+        trade_time: dayjs().format('HH:mm:ss'),
+      });
+
+      if (tradeModal.type === 'buy') {
+        updateStockStatus(tradeModal.stock.code, 'bought', price, quantity);
+      } else {
+        updateStockStatus(tradeModal.stock.code, 'abandoned', price, quantity);
+      }
+
+      setTradeModal(prev => ({ ...prev, show: false }));
+      loadTrades();
+      alert(tradeModal.type === 'buy' ? '买入成功' : '卖出成功');
+    } catch (err) {
+      console.error('Failed to record trade:', err);
+      alert('操作失败');
+    } finally {
+      setTradeModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -406,12 +494,7 @@ export default function TodayPlan() {
                                     <>
                                       <button
                                         className="btn-action buy"
-                                        onClick={() => {
-                                          const price = prompt('请输入买入价格:');
-                                          if (price) {
-                                            updateStockStatus(stock.code, 'bought', parseFloat(price), 100);
-                                          }
-                                        }}
+                                        onClick={() => openBuyModal(stock)}
                                       >
                                         买入
                                       </button>
@@ -426,12 +509,7 @@ export default function TodayPlan() {
                                   {status === 'bought' && (
                                     <button
                                       className="btn-action sell"
-                                      onClick={() => {
-                                        const price = prompt('请输入卖出价格:');
-                                        if (price) {
-                                          updateStockStatus(stock.code, 'abandoned');
-                                        }
-                                      }}
+                                      onClick={() => openSellModal(stock)}
                                     >
                                       卖出
                                     </button>
@@ -633,6 +711,58 @@ export default function TodayPlan() {
               </div>
             )}
           </div>
+
+          {tradeModal.show && (
+            <div className="modal-overlay" onClick={() => setTradeModal(prev => ({ ...prev, show: false }))}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>{tradeModal.type === 'buy' ? '买入' : '卖出'} {tradeModal.stock?.name}</h2>
+                  <button className="modal-close" onClick={() => setTradeModal(prev => ({ ...prev, show: false }))}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>股票代码</label>
+                    <input type="text" value={tradeModal.stock?.code || ''} disabled />
+                  </div>
+                  <div className="form-group">
+                    <label>价格</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={tradeModal.price}
+                      onChange={(e) => setTradeModal(prev => ({ ...prev, price: e.target.value }))}
+                      placeholder="请输入价格"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>数量(股)</label>
+                    <input
+                      type="number"
+                      value={tradeModal.quantity}
+                      onChange={(e) => setTradeModal(prev => ({ ...prev, quantity: e.target.value }))}
+                      placeholder="请输入数量"
+                    />
+                  </div>
+                  {tradeModal.price && tradeModal.quantity && (
+                    <div className="trade-preview">
+                      <span>预估金额: ¥{(parseFloat(tradeModal.price) * parseInt(tradeModal.quantity)).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn" onClick={() => setTradeModal(prev => ({ ...prev, show: false }))}>取消</button>
+                  <button
+                    className={`btn ${tradeModal.type === 'buy' ? 'btn-primary' : 'btn-danger'}`}
+                    onClick={handleTrade}
+                    disabled={tradeModal.loading}
+                  >
+                    {tradeModal.loading ? '提交中...' : (tradeModal.type === 'buy' ? '确认买入' : '确认卖出')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
