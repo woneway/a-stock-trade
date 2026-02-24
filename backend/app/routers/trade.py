@@ -6,6 +6,7 @@ from datetime import date
 from app.database import engine
 from app.models.trade import Trade
 from app.models.plan import PrePlan
+from app.models.position import Position
 from app.schemas.trade import TradeCreate, TradeResponse, TradeSummary
 
 
@@ -98,6 +99,50 @@ def create_trade(item: TradeCreate, db: Session = Depends(get_db)):
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
+
+    if db_item.action == "buy":
+        statement = select(Position).where(
+            Position.code == item.stock_code,
+            Position.status == "holding"
+        )
+        existing_positions = db.exec(statement).all()
+        if existing_positions:
+            pos = existing_positions[0]
+            total_quantity = pos.quantity + item.quantity
+            new_avg_cost = (pos.avg_cost * pos.quantity + item.price * item.quantity) / total_quantity
+            pos.quantity = total_quantity
+            pos.avg_cost = new_avg_cost
+            pos.current_price = item.price
+            pos.updated_at = date.today()
+        else:
+            new_position = Position(
+                code=item.stock_code,
+                name=item.stock_name,
+                quantity=item.quantity,
+                avg_cost=item.price,
+                current_price=item.price,
+                market_value=item.price * item.quantity,
+                status="holding",
+                entry_date=item.trade_date,
+            )
+            db.add(new_position)
+        db.commit()
+    elif db_item.action == "sell":
+        statement = select(Position).where(
+            Position.code == item.stock_code,
+            Position.status == "holding"
+        )
+        existing_positions = db.exec(statement).all()
+        if existing_positions:
+            pos = existing_positions[0]
+            pos.quantity = pos.quantity - item.quantity
+            pos.current_price = item.price
+            pos.updated_at = date.today()
+            if pos.quantity <= 0:
+                pos.status = "closed"
+                pos.quantity = 0
+            db.commit()
+
     return TradeResponse(
         stock_code=db_item.code,
         stock_name=db_item.name,

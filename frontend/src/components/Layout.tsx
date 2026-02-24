@@ -4,10 +4,8 @@ import './Layout.css';
 const menuItems = [
   { path: '/', label: '首页', icon: '🏠' },
   { path: '/today', label: '今日计划', icon: '📋' },
-  { path: '/heat', label: '热度', icon: '🔥' },
   { path: '/strategy', label: '策略', icon: '🎯' },
   { path: '/plans', label: '计划列表', icon: '📊' },
-  { path: '/positions', label: '持仓', icon: '💼' },
   { path: '/settings', label: '设置', icon: '⚙️' },
 ];
 

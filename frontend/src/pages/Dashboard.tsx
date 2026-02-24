@@ -32,8 +32,9 @@ export default function Dashboard() {
 
   const totalAssets = 100000;
   const availableCash = 30000;
-  const marketValue = positions.reduce((sum, p) => sum + (p.current_price || 0) * p.quantity, 0);
-  const totalCost = positions.reduce((sum, p) => sum + p.cost_price * p.quantity, 0);
+  const holdingPositions = positions.filter(p => p.status === 'holding');
+  const marketValue = holdingPositions.reduce((sum, p) => sum + (p.current_price || 0) * p.quantity, 0);
+  const totalCost = holdingPositions.reduce((sum, p) => sum + p.cost_price * p.quantity, 0);
   const totalProfit = marketValue - totalCost;
   const todayProfit = trades
     .filter(t => t.trade_type === 'sell')
@@ -111,7 +112,7 @@ export default function Dashboard() {
           </div>
           <div className="hero-stat">
             <span className="hero-stat-label">持仓数量</span>
-            <span className="hero-stat-value">{positions.length}</span>
+            <span className="hero-stat-value">{holdingPositions.length}</span>
           </div>
         </div>
       </div>
@@ -139,7 +140,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {positions.map((pos) => {
+              {positions.filter(p => p.status === 'holding').map((pos) => {
                 const profit = ((pos.current_price || 0) - pos.cost_price) * pos.quantity;
                 const profitRatio = ((pos.current_price || 0) - pos.cost_price) / pos.cost_price * 100;
                 return (
