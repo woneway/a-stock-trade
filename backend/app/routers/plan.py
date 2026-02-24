@@ -115,6 +115,17 @@ def confirm_plan(plan_id: int, db: Session = Depends(get_db)):
     return db_item
 
 
+@router.delete("/pre/{plan_id}")
+def delete_pre_plan(plan_id: int, db: Session = Depends(get_db)):
+    db_item = db.get(PrePlan, plan_id)
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    db.delete(db_item)
+    db.commit()
+    return {"message": "Plan deleted"}
+
+
 @router.post("/generate-from-strategies", response_model=PrePlanResponse)
 def generate_plan_from_strategies(
     strategy_ids: str,
