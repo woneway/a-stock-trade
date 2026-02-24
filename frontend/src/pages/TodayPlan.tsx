@@ -207,13 +207,24 @@ export default function TodayPlan() {
                 <div className="plan-summary-card">
                   <div className="plan-summary-header">
                     <h3>🎯 今日策略: {todayPlan.selected_strategy || '未选择'}</h3>
-                  </div>
-                  {todayPlan.entry_condition && (
-                    <div className="plan-condition">
-                      <span className="condition-label">买入条件:</span>
-                      <span className="condition-text">{todayPlan.entry_condition}</span>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                      {todayPlan.sentiment && (
+                        <span style={{ background: '#fce7f3', color: '#be185d', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                          情绪: {todayPlan.sentiment}
+                        </span>
+                      )}
+                      {todayPlan.external_signals && (
+                        <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                          板块: {todayPlan.external_signals}
+                        </span>
+                      )}
+                      {todayPlan.entry_condition && (
+                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
+                          买入: {todayPlan.entry_condition}
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                   {todayPlan.exit_condition && (
                     <div className="plan-condition">
                       <span className="condition-label">卖出条件:</span>

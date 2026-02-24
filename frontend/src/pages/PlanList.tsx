@@ -117,6 +117,9 @@ export default function PlanList() {
   const [createPlanDate, setCreatePlanDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [createWatchIndicators, setCreateWatchIndicators] = useState<string[]>(['涨停数量', '下跌家数', '连板数量']);
   const [createWatchMessages, setCreateWatchMessages] = useState<string[]>(['政策消息', '外围市场']);
+  const [createMarketCycle, setCreateMarketCycle] = useState<string>('混沌');
+  const [createBoardEffect, setCreateBoardEffect] = useState<string>('主流');
+  const [createEntryType, setCreateEntryType] = useState<string>('打板');
 
   useEffect(() => {
     loadPlans();
@@ -323,6 +326,9 @@ export default function PlanList() {
             candidate_stocks: JSON.stringify(allSelectedStocks),
             watch_indicators: createWatchIndicators.join(','),
             watch_messages: createWatchMessages.join(','),
+            sentiment: createMarketCycle,
+            external_signals: createBoardEffect,
+            entry_condition: createEntryType,
           });
         }
       }
@@ -572,6 +578,54 @@ export default function PlanList() {
                     ))}
                   </div>
                 </div>
+
+                <div className="form-section">
+                  <div className="form-section-title">🔍 观察要点</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>情绪周期</label>
+                      <select
+                        value={createMarketCycle}
+                        onChange={(e) => setCreateMarketCycle(e.target.value)}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="冰点">冰点</option>
+                        <option value="发酵">发酵</option>
+                        <option value="高潮">高潮</option>
+                        <option value="退潮">退潮</option>
+                        <option value="混沌">混沌</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>板块效应</label>
+                      <select
+                        value={createBoardEffect}
+                        onChange={(e) => setCreateBoardEffect(e.target.value)}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="主流">主流</option>
+                        <option value="支流">支流</option>
+                        <option value="轮动">轮动</option>
+                        <option value="混沌">混沌</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>买入方式</label>
+                      <select
+                        value={createEntryType}
+                        onChange={(e) => setCreateEntryType(e.target.value)}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="竞价">竞价买入</option>
+                        <option value="低吸">低吸回调</option>
+                        <option value="打板">打板/封板</option>
+                        <option value="回封">回封</option>
+                        <option value="尾盘">尾盘</option>
+                        <option value="分时均线">分时均线</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -744,6 +798,54 @@ export default function PlanList() {
                         {item}
                       </span>
                     ))}
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <div className="form-section-title">🔍 观察要点</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>情绪周期</label>
+                      <select
+                        value={editingPlan.sentiment || '混沌'}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, sentiment: e.target.value })}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="冰点">冰点</option>
+                        <option value="发酵">发酵</option>
+                        <option value="高潮">高潮</option>
+                        <option value="退潮">退潮</option>
+                        <option value="混沌">混沌</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>板块效应</label>
+                      <select
+                        value={editingPlan.external_signals || '主流'}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, external_signals: e.target.value })}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="主流">主流</option>
+                        <option value="支流">支流</option>
+                        <option value="轮动">轮动</option>
+                        <option value="混沌">混沌</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#64748b' }}>买入方式</label>
+                      <select
+                        value={editingPlan.entry_condition || '打板'}
+                        onChange={(e) => setEditingPlan({ ...editingPlan, entry_condition: e.target.value })}
+                        style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                      >
+                        <option value="竞价">竞价买入</option>
+                        <option value="低吸">低吸回调</option>
+                        <option value="打板">打板/封板</option>
+                        <option value="回封">回封</option>
+                        <option value="尾盘">尾盘</option>
+                        <option value="分时均线">分时均线</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
