@@ -12,6 +12,7 @@ class TradeBase(BaseModel):
     amount: float
     fee: float
     reason: str
+    trade_time: Optional[str] = None
     entry_price: Optional[float] = None
     exit_price: Optional[float] = None
     pnl: Optional[float] = None

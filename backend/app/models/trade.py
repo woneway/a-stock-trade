@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from sqlmodel import Field, SQLModel
 from typing import Optional
 
@@ -18,6 +18,7 @@ class Trade(SQLModel, table=True):
     amount: float
     fee: float
     reason: str
+    trade_time: Optional[str] = Field(default=None, alias="tradeTime")
 
     entry_price: Optional[float] = Field(default=None, alias="entryPrice")
     exit_price: Optional[float] = Field(default=None, alias="exitPrice")

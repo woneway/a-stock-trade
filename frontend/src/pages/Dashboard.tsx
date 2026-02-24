@@ -50,6 +50,8 @@ export default function Dashboard() {
 
   const confirmSell = async () => {
     if (!selectedPosition) return;
+    const amount = sellForm.quantity * sellForm.price;
+    const fee = amount * 0.0003;
     try {
       await tradesApi.create({
         stock_code: selectedPosition.stock_code,
@@ -57,8 +59,11 @@ export default function Dashboard() {
         trade_type: 'sell',
         quantity: sellForm.quantity,
         price: sellForm.price,
-        amount: sellForm.quantity * sellForm.price,
+        amount,
+        fee,
+        reason: '持仓卖出',
         trade_date: new Date().toISOString().split('T')[0],
+        trade_time: new Date().toTimeString().split(' ')[0],
       });
       setShowSellModal(false);
       loadData();

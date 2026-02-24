@@ -40,6 +40,7 @@ interface Trade {
   reason?: string;
   pnl?: number;
   trade_date: string;
+  trade_time?: string;
 }
 
 const DEFAULT_INDICATORS = [
@@ -542,6 +543,7 @@ export default function TodayPlan() {
                       <table>
                         <thead>
                           <tr>
+                            <th>时间</th>
                             <th>股票</th>
                             <th>操作</th>
                             <th>价格</th>
@@ -553,6 +555,7 @@ export default function TodayPlan() {
                         <tbody>
                           {trades.map((trade, idx) => (
                             <tr key={idx}>
+                              <td>{trade.trade_time || '-'}</td>
                               <td>
                                 <div className="stock-cell">
                                   <span className="stock-name">{trade.stock_name}</span>
