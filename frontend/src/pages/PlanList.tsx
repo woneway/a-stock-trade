@@ -438,7 +438,7 @@ export default function PlanList() {
 
     try {
       await axios.put(`/api/plan/pre/${editingPlan.id}`, {
-        strategy_ids: JSON.stringify(editingStrategyIds),
+        strategy_ids: editingStrategyIds.join(','),
         candidate_stocks: JSON.stringify(allSelectedStocks),
         sentiment: editingPlan.sentiment,
         external_signals: editingPlan.external_signals,
