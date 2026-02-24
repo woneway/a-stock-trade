@@ -74,7 +74,10 @@ export default function TodayPlan() {
             const parsed = typeof res.data.candidate_stocks === 'string'
               ? JSON.parse(res.data.candidate_stocks)
               : res.data.candidate_stocks;
-            setCandidateStocks(parsed);
+            const uniqueStocks = Array.from<unknown>(
+              new Map(parsed.map((s: CandidateStock) => [s.code, s])).values()
+            ) as CandidateStock[];
+            setCandidateStocks(uniqueStocks);
           } catch (e) {
             console.error('Parse candidate_stocks error:', e);
           }
