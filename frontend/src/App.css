@@ -1652,6 +1652,109 @@ td .number {
   margin-bottom: 20px;
 }
 
+.plan-vs-actual {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.plan-vs-actual h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.plan-vs-table {
+  overflow-x: auto;
+}
+
+.plan-vs-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.plan-vs-table th,
+.plan-vs-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.plan-vs-table th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.plan-vs-table .stock-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-vs-table .stock-name {
+  font-weight: 500;
+}
+
+.plan-vs-table .stock-code {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.plan-status {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.plan-status.planned {
+  background: var(--gray-100);
+  color: var(--text-secondary);
+}
+
+.plan-status.bought {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.plan-status.abandoned {
+  background: var(--gray-100);
+  color: var(--text-secondary);
+}
+
+.plan-status.pending {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+}
+
+.exec-status {
+  font-size: 14px;
+}
+
+.exec-status.success {
+  color: #16a34a;
+}
+
+.exec-status.abandoned {
+  color: #6b7280;
+}
+
+.exec-status.missed {
+  color: #d97706;
+}
+
+.plan-summary-row {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .summary-item {
   background: var(--bg-card);
   padding: 16px 24px;
@@ -3107,6 +3210,69 @@ td .number {
   color: white;
 }
 
+.market-env-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.market-env-section .env-card {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.market-env-section .env-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.market-env-section .indicator-tags.compact {
+  gap: 6px;
+}
+
+.market-env-section .indicator-tags.compact .tag {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.plan-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.plan-meta-row .meta-tag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.plan-meta-row .meta-tag.sentiment {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.plan-meta-row .meta-tag.board {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.plan-meta-row .meta-tag.entry {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.plan-meta-row .meta-tag.exit {
+  background: #fef3c7;
+  color: #d97706;
+}
+
 .market-tabs {
   display: flex;
   gap: 0;
@@ -4536,11 +4702,11 @@ td .number {
 }
 
 .stat-value.positive {
-  color: var(--success);
+  color: var(--danger);
 }
 
 .stat-value.negative {
-  color: var(--danger);
+  color: var(--success);
 }
 
 .strategy-stats-table {
@@ -4754,6 +4920,19 @@ td .number {
   gap: 16px;
 }
 
+.strategy-group {
+  margin-bottom: 24px;
+}
+
+.strategy-group-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
 .candidate-card {
   background: var(--bg-secondary);
   border-radius: 8px;
@@ -4819,11 +4998,11 @@ td .number {
 }
 
 .stat-card .stat-value.positive {
-  color: var(--success);
+  color: var(--danger);
 }
 
 .stat-card .stat-value.negative {
-  color: var(--danger);
+  color: var(--success);
 }
 
 .stat-card .stat-label {
@@ -4860,4 +5039,182 @@ td .number {
 .time-cell {
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.positions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.position-card {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.position-card .position-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.position-card .stock-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.position-card .stock-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.position-card .stock-code {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.position-card .profit-tag {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.position-card .profit-tag.profit {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.position-card .profit-tag.loss {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.position-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--gray-100);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.position-details .detail-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.position-details .detail-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.position-details .detail-value {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.position-details .detail-value.profit {
+  color: #dc2626;
+}
+
+.position-details .detail-value.loss {
+  color: #16a34a;
+}
+
+.position-plan {
+  margin-top: 12px;
+}
+
+.position-plan .plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.position-plan .plan-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.position-plan .plan-display {
+  font-size: 13px;
+}
+
+.position-plan .plan-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.position-plan .plan-label {
+  color: var(--text-secondary);
+  min-width: 60px;
+}
+
+.position-plan .plan-value {
+  color: var(--text-primary);
+}
+
+.position-plan .plan-value.loss {
+  color: #dc2626;
+}
+
+.position-plan .plan-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.position-plan .plan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.position-plan .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.position-plan .form-row label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.position-plan .form-row input,
+.position-plan .form-row textarea {
+  padding: 8px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.position-plan .form-row textarea {
+  resize: none;
+}
+
+.position-plan .form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
 }

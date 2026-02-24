@@ -253,17 +253,18 @@ export default function PlanList() {
   };
 
   const toggleEditingStrategy = (id: number) => {
-    setEditingStrategyIds(prev =>
-      prev.includes(id)
+    setEditingStrategyIds(prev => {
+      const newIds = prev.includes(id)
         ? prev.filter(s => s !== id)
-        : [...prev, id]
-    );
-    if (!editingStrategyIds.includes(id)) {
-      const strategy = strategies.find(s => s.id === id);
-      setEditingStrategyStocks(prev => [...prev, { strategyId: id, strategyName: strategy?.name || '', stocks: [], selectedStocks: [], scanning: false }]);
-    } else {
-      setEditingStrategyStocks(prev => prev.filter(s => s.strategyId !== id));
-    }
+        : [...prev, id];
+      if (!prev.includes(id)) {
+        const strategy = strategies.find(s => s.id === id);
+        setEditingStrategyStocks(prev => [...prev, { strategyId: id, strategyName: strategy?.name || '', stocks: [], selectedStocks: [], scanning: false }]);
+      } else {
+        setEditingStrategyStocks(prev => prev.filter(s => s.strategyId !== id));
+      }
+      return newIds;
+    });
   };
 
   const scanEditingStrategyStocks = async (strategyId: number, strategyName: string) => {
@@ -300,7 +301,7 @@ export default function PlanList() {
       return;
     }
 
-    const allSelectedStocks = strategyStocks.flatMap(s => 
+    const allSelectedStocks = strategyStocks.flatMap(s =>
       s.selectedStocks.map(code => {
         const stock = s.stocks.find(st => st.code === code);
         return {
@@ -309,6 +310,8 @@ export default function PlanList() {
           buy_reason: stock?.entry_advice?.signal || '',
           sell_reason: '',
           priority: 1,
+          strategy_id: s.strategyId,
+          strategy_name: s.strategyName,
         };
       })
     );
@@ -432,6 +435,8 @@ export default function PlanList() {
           buy_reason: stock?.entry_advice?.signal || '',
           sell_reason: '',
           priority: 1,
+          strategy_id: s.strategyId,
+          strategy_name: s.strategyName,
         };
       })
     );
@@ -637,11 +642,11 @@ export default function PlanList() {
                         key={strategy.id}
                         className={`strategy-select-item ${selectedStrategyIds.includes(strategy.id) ? 'selected' : ''}`}
                         onClick={() => {
-                          if (selectedStrategyIds.includes(strategy.id)) {
-                            toggleStrategy(strategy.id);
+                          const isSelected = selectedStrategyIds.includes(strategy.id);
+                          toggleStrategy(strategy.id);
+                          if (isSelected) {
                             setStrategyStocks(prev => prev.filter(s => s.strategyId !== strategy.id));
                           } else {
-                            toggleStrategy(strategy.id);
                             setStrategyStocks(prev => [...prev, { strategyId: strategy.id, strategyName: strategy.name, stocks: [], selectedStocks: [], scanning: false }]);
                           }
                         }}

@@ -8,6 +8,8 @@ interface CandidateStock {
   buy_reason: string;
   sell_reason: string;
   priority: number;
+  strategy_id?: number;
+  strategy_name?: string;
 }
 
 interface PrePlan {
@@ -265,95 +267,86 @@ export default function TodayPlan() {
           <div className="tab-content">
             {activeTab === 'pre' && (
               <div className="pre-market">
-                <div className="plan-summary-card">
-                  <div className="plan-summary-header">
-                    <h3>🎯 今日策略: {todayPlan.selected_strategy || '未选择'}</h3>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                      {todayPlan.sentiment && (
-                        <span style={{ background: '#fce7f3', color: '#be185d', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                          情绪: {todayPlan.sentiment}
+                <div className="market-env-section">
+                  <div className="env-card">
+                    <h4>📊 关注指标</h4>
+                    <div className="indicator-tags compact">
+                      {DEFAULT_INDICATORS.map(indicator => (
+                        <span
+                          key={indicator}
+                          className={`tag ${watchIndicators.includes(indicator) ? 'active' : ''}`}
+                          onClick={() => todayPlan?.id && toggleIndicator(indicator)}
+                        >
+                          {indicator}
                         </span>
-                      )}
-                      {todayPlan.external_signals && (
-                        <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                          板块: {todayPlan.external_signals}
-                        </span>
-                      )}
-                      {todayPlan.entry_condition && (
-                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                          买入: {todayPlan.entry_condition}
-                        </span>
-                      )}
+                      ))}
                     </div>
                   </div>
-                  {todayPlan.exit_condition && (
-                    <div className="plan-condition">
-                      <span className="condition-label">卖出条件:</span>
-                      <span className="condition-text">{todayPlan.exit_condition}</span>
+                  <div className="env-card">
+                    <h4>📰 关注消息</h4>
+                    <div className="indicator-tags compact">
+                      {DEFAULT_MESSAGES.map(message => (
+                        <span
+                          key={message}
+                          className={`tag ${watchMessages.includes(message) ? 'active' : ''}`}
+                          onClick={() => todayPlan?.id && toggleMessage(message)}
+                        >
+                          {message}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                  {todayPlan.plan_basis && (
-                    <div className="plan-condition">
-                      <span className="condition-label">计划依据:</span>
-                      <span className="condition-text">{todayPlan.plan_basis}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="plan-section">
-                  <h3>📊 关注指标</h3>
-                  <div className="indicator-tags">
-                    {DEFAULT_INDICATORS.map(indicator => (
-                      <span
-                        key={indicator}
-                        className={`tag ${watchIndicators.includes(indicator) ? 'active' : ''}`}
-                        onClick={() => todayPlan?.id && toggleIndicator(indicator)}
-                      >
-                        {indicator}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="plan-section">
-                  <h3>📰 关注消息</h3>
-                  <div className="indicator-tags">
-                    {DEFAULT_MESSAGES.map(message => (
-                      <span
-                        key={message}
-                        className={`tag ${watchMessages.includes(message) ? 'active' : ''}`}
-                        onClick={() => todayPlan?.id && toggleMessage(message)}
-                      >
-                        {message}
-                      </span>
-                    ))}
                   </div>
                 </div>
 
                 <div className="plan-section">
                   <h3>📈 候选股票 ({candidateStocks.length})</h3>
+                  <div className="plan-meta-row">
+                    {todayPlan.sentiment && (
+                      <span className="meta-tag sentiment">情绪: {todayPlan.sentiment}</span>
+                    )}
+                    {todayPlan.external_signals && (
+                      <span className="meta-tag board">板块: {todayPlan.external_signals}</span>
+                    )}
+                    {todayPlan.entry_condition && (
+                      <span className="meta-tag entry">买入: {todayPlan.entry_condition}</span>
+                    )}
+                    {todayPlan.exit_condition && (
+                      <span className="meta-tag exit">卖出: {todayPlan.exit_condition}</span>
+                    )}
+                  </div>
                   {candidateStocks.length === 0 ? (
                     <div className="empty-tip">暂无候选股票</div>
-                  ) : (
-                    <div className="candidate-grid">
-                      {candidateStocks.map((stock, idx) => (
-                        <div key={idx} className="candidate-card">
-                          <div className="candidate-header">
-                            <span className="stock-name">{stock.name}</span>
-                            <span className="stock-code">{stock.code}</span>
-                          </div>
-                          <div className="candidate-reason">
-                            <span className="reason-label">买:</span> {stock.buy_reason}
-                          </div>
-                          {stock.sell_reason && (
-                            <div className="candidate-reason">
-                              <span className="reason-label">卖:</span> {stock.sell_reason}
+                  ) : (() => {
+                    const grouped = candidateStocks.reduce((acc, stock) => {
+                      const key = stock.strategy_name || '未分组';
+                      if (!acc[key]) acc[key] = [];
+                      acc[key].push(stock);
+                      return acc;
+                    }, {} as Record<string, CandidateStock[]>);
+                    return Object.entries(grouped).map(([strategyName, stocks]) => (
+                      <div key={strategyName} className="strategy-group">
+                        <h4 className="strategy-group-title">📋 {strategyName}</h4>
+                        <div className="candidate-grid">
+                          {stocks.map((stock, idx) => (
+                            <div key={idx} className="candidate-card">
+                              <div className="candidate-header">
+                                <span className="stock-name">{stock.name}</span>
+                                <span className="stock-code">{stock.code}</span>
+                              </div>
+                              <div className="candidate-reason">
+                                <span className="reason-label">买:</span> {stock.buy_reason}
+                              </div>
+                              {stock.sell_reason && (
+                                <div className="candidate-reason">
+                                  <span className="reason-label">卖:</span> {stock.sell_reason}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    ));
+                  })()}
                 </div>
 
                 {todayPlan.status === 'draft' && (
@@ -369,90 +362,98 @@ export default function TodayPlan() {
 
             {activeTab === 'in' && (
               <div className="in-market">
-                <div className="candidate-section">
-                  <h3>📈 候选股票池 - 盘中执行</h3>
-                  {candidateStocks.length === 0 ? (
-                    <div className="empty-tip">暂无候选股票</div>
-                  ) : (
-                    <div className="stock-table">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>股票</th>
-                            <th>买入理由</th>
-                            <th>状态</th>
-                            <th>操作</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {candidateStocks.map((stock, idx) => {
-                            const status = stockStatuses[stock.code]?.status || 'pending';
-                            return (
-                            <tr key={idx}>
-                              <td>
-                                <div className="stock-cell">
-                                  <span className="stock-name">{stock.name}</span>
-                                  <span className="stock-code">{stock.code}</span>
-                                </div>
-                              </td>
-                              <td className="reason-cell">{stock.buy_reason}</td>
-                              <td>
-                                <span className={`status-tag ${status}`}>
-                                  {status === 'pending' ? '待买' : status === 'bought' ? '已买' : '放弃'}
-                                </span>
-                              </td>
-                              <td style={{ display: 'flex', gap: '4px' }}>
-                                {status === 'pending' && (
-                                  <>
-                                    <button 
-                                      className="btn-action buy" 
+                {candidateStocks.length === 0 ? (
+                  <div className="empty-tip">暂无候选股票</div>
+                ) : (() => {
+                  const grouped = candidateStocks.reduce((acc, stock) => {
+                    const key = stock.strategy_name || '未分组';
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(stock);
+                    return acc;
+                  }, {} as Record<string, CandidateStock[]>);
+                  return Object.entries(grouped).map(([strategyName, stocks]) => (
+                    <div key={strategyName} className="candidate-section">
+                      <h3>📈 {strategyName} - 盘中执行</h3>
+                      <div className="stock-table">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>股票</th>
+                              <th>买入理由</th>
+                              <th>状态</th>
+                              <th>操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stocks.map((stock, idx) => {
+                              const status = stockStatuses[stock.code]?.status || 'pending';
+                              return (
+                              <tr key={idx}>
+                                <td>
+                                  <div className="stock-cell">
+                                    <span className="stock-name">{stock.name}</span>
+                                    <span className="stock-code">{stock.code}</span>
+                                  </div>
+                                </td>
+                                <td className="reason-cell">{stock.buy_reason}</td>
+                                <td>
+                                  <span className={`status-tag ${status}`}>
+                                    {status === 'pending' ? '待买' : status === 'bought' ? '已买' : '放弃'}
+                                  </span>
+                                </td>
+                                <td style={{ display: 'flex', gap: '4px' }}>
+                                  {status === 'pending' && (
+                                    <>
+                                      <button
+                                        className="btn-action buy"
+                                        onClick={() => {
+                                          const price = prompt('请输入买入价格:');
+                                          if (price) {
+                                            updateStockStatus(stock.code, 'bought', parseFloat(price), 100);
+                                          }
+                                        }}
+                                      >
+                                        买入
+                                      </button>
+                                      <button
+                                        className="btn-action abandon"
+                                        onClick={() => updateStockStatus(stock.code, 'abandoned')}
+                                      >
+                                        放弃
+                                      </button>
+                                    </>
+                                  )}
+                                  {status === 'bought' && (
+                                    <button
+                                      className="btn-action sell"
                                       onClick={() => {
-                                        const price = prompt('请输入买入价格:');
+                                        const price = prompt('请输入卖出价格:');
                                         if (price) {
-                                          updateStockStatus(stock.code, 'bought', parseFloat(price), 100);
+                                          updateStockStatus(stock.code, 'abandoned');
                                         }
                                       }}
                                     >
-                                      买入
+                                      卖出
                                     </button>
-                                    <button 
-                                      className="btn-action abandon"
-                                      onClick={() => updateStockStatus(stock.code, 'abandoned')}
+                                  )}
+                                  {status === 'abandoned' && (
+                                    <button
+                                      className="btn-action"
+                                      onClick={() => updateStockStatus(stock.code, 'pending')}
+                                      style={{ fontSize: '11px', padding: '4px 8px' }}
                                     >
-                                      放弃
+                                      恢复
                                     </button>
-                                  </>
-                                )}
-                                {status === 'bought' && (
-                                  <button 
-                                    className="btn-action sell"
-                                    onClick={() => {
-                                      const price = prompt('请输入卖出价格:');
-                                      if (price) {
-                                        updateStockStatus(stock.code, 'abandoned');
-                                      }
-                                    }}
-                                  >
-                                    卖出
-                                  </button>
-                                )}
-                                {status === 'abandoned' && (
-                                  <button 
-                                    className="btn-action"
-                                    onClick={() => updateStockStatus(stock.code, 'pending')}
-                                    style={{ fontSize: '11px', padding: '4px 8px' }}
-                                  >
-                                    恢复
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          )})}
-                        </tbody>
-                      </table>
+                                  )}
+                                </td>
+                              </tr>
+                              )})}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  ));
+                })()}
 
                 <div className="trades-section">
                   <h3>📋 今日成交 ({trades.length})</h3>
@@ -520,6 +521,64 @@ export default function TodayPlan() {
                       </span>
                       <span className="stat-label">总盈亏</span>
                     </div>
+                  </div>
+                </div>
+
+                <div className="plan-vs-actual">
+                  <h3>📋 计划 vs 实际</h3>
+                  <div className="plan-vs-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>股票</th>
+                          <th>计划买入</th>
+                          <th>实际买入</th>
+                          <th>状态</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {candidateStocks.map((stock, idx) => {
+                          const status = stockStatuses[stock.code]?.status;
+                          const isPlanned = true;
+                          const isBought = status === 'bought';
+                          const isAbandoned = status === 'abandoned';
+                          return (
+                            <tr key={idx}>
+                              <td>
+                                <div className="stock-cell">
+                                  <span className="stock-name">{stock.name}</span>
+                                  <span className="stock-code">{stock.code}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className="plan-status planned">计划</span>
+                              </td>
+                              <td>
+                                {isBought && <span className="plan-status bought">已买</span>}
+                                {isAbandoned && <span className="plan-status abandoned">放弃</span>}
+                                {!isBought && !isAbandoned && <span className="plan-status pending">未买</span>}
+                              </td>
+                              <td>
+                                {isBought && <span className="exec-status success">✓</span>}
+                                {isAbandoned && <span className="exec-status abandoned">✗</span>}
+                                {!isBought && !isAbandoned && <span className="exec-status missed">-</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {candidateStocks.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="empty-tip">暂无计划</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="plan-summary-row">
+                    <span>计划买入: {candidateStocks.length}</span>
+                    <span>实际买入: {Object.values(stockStatuses).filter(s => s.status === 'bought').length}</span>
+                    <span>放弃: {Object.values(stockStatuses).filter(s => s.status === 'abandoned').length}</span>
+                    <span>未执行: {candidateStocks.length - Object.values(stockStatuses).filter(s => s.status === 'bought' || s.status === 'abandoned').length}</span>
                   </div>
                 </div>
 

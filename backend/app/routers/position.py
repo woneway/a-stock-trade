@@ -56,6 +56,10 @@ def get_positions(db: Session = Depends(get_db), status: str = None):
             id=p.id,
             created_at=p.created_at,
             updated_at=p.updated_at,
+            sell_target=p.sell_target,
+            stop_loss=p.stop_loss,
+            trade_plan=p.trade_plan,
+            holding_reason=p.holding_reason,
         ))
     return positions
 
@@ -92,6 +96,10 @@ def create_position(item: PositionCreate, db: Session = Depends(get_db)):
         id=db_item.id,
         created_at=db_item.created_at,
         updated_at=db_item.updated_at,
+        sell_target=db_item.sell_target,
+        stop_loss=db_item.stop_loss,
+        trade_plan=db_item.trade_plan,
+        holding_reason=db_item.holding_reason,
     )
 
 
@@ -119,6 +127,10 @@ def get_position(item_id: int, db: Session = Depends(get_db)):
         id=item.id,
         created_at=item.created_at,
         updated_at=item.updated_at,
+        sell_target=item.sell_target,
+        stop_loss=item.stop_loss,
+        trade_plan=item.trade_plan,
+        holding_reason=item.holding_reason,
     )
 
 
@@ -127,16 +139,40 @@ def update_position(item_id: int, item: PositionUpdate, db: Session = Depends(ge
     db_item = db.get(Position, item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Position not found")
-    
+
     item_data = item.model_dump(exclude_unset=True)
     for key, value in item_data.items():
         setattr(db_item, key, value)
     db_item.updated_at = date.today()
-    
+
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
-    return db_item
+
+    current_price = db_item.current_price if db_item.current_price and db_item.current_price > 0 else db_item.avg_cost
+    market_value = db_item.quantity * current_price
+    profit_loss = (current_price - db_item.avg_cost) * db_item.quantity
+    profit_ratio = ((current_price - db_item.avg_cost) / db_item.avg_cost * 100) if db_item.avg_cost > 0 else 0
+    return PositionResponse(
+        stock_code=db_item.code,
+        stock_name=db_item.name,
+        quantity=db_item.quantity,
+        available_quantity=db_item.quantity,
+        cost_price=db_item.avg_cost,
+        current_price=current_price,
+        market_value=market_value,
+        profit_amount=profit_loss,
+        profit_ratio=profit_ratio,
+        status=db_item.status,
+        opened_at=db_item.entry_date,
+        id=db_item.id,
+        created_at=db_item.created_at,
+        updated_at=db_item.updated_at,
+        sell_target=db_item.sell_target,
+        stop_loss=db_item.stop_loss,
+        trade_plan=db_item.trade_plan,
+        holding_reason=db_item.holding_reason,
+    )
 
 
 @router.delete("/{item_id}")

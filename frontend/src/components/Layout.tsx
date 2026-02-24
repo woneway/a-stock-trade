@@ -7,6 +7,7 @@ const menuItems = [
   { path: '/heat', label: '热度', icon: '🔥' },
   { path: '/strategy', label: '策略', icon: '🎯' },
   { path: '/plans', label: '计划列表', icon: '📊' },
+  { path: '/positions', label: '持仓', icon: '💼' },
   { path: '/settings', label: '设置', icon: '⚙️' },
 ];
 

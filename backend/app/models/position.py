@@ -19,6 +19,10 @@ class Position(SQLModel, table=True):
     entry_date: date = Field(default_factory=date.today, alias="entryDate")
     created_at: date = Field(default_factory=date.today)
     updated_at: date = Field(default_factory=date.today)
+    sell_target: Optional[float] = Field(default=None, alias="sellTarget")
+    stop_loss: Optional[float] = Field(default=None, alias="stopLoss")
+    trade_plan: Optional[str] = Field(default=None, alias="tradePlan")
+    holding_reason: Optional[str] = Field(default=None, alias="holdingReason")
 
     class Config:
         populate_by_name = True
