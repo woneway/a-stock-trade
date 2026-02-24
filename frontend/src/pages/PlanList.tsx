@@ -108,7 +108,6 @@ export default function PlanList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PrePlan | null>(null);
-  const [candidateStocksEdit, setCandidateStocksEdit] = useState<CandidateStockInput[]>([]);
   const [editingStrategyIds, setEditingStrategyIds] = useState<number[]>([]);
   const [editingStrategyStocks, setEditingStrategyStocks] = useState<StrategyStocks[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
@@ -426,12 +425,10 @@ export default function PlanList() {
       })
     );
 
-    const mergedStocks = [...candidateStocksEdit, ...allSelectedStocks];
-
     try {
       await axios.put(`/api/plan/pre/${editingPlan.id}`, {
         strategy_ids: JSON.stringify(editingStrategyIds),
-        candidate_stocks: JSON.stringify(mergedStocks),
+        candidate_stocks: JSON.stringify(allSelectedStocks),
         sentiment: editingPlan.sentiment,
         external_signals: editingPlan.external_signals,
         sectors: editingPlan.sectors,
@@ -448,23 +445,6 @@ export default function PlanList() {
       console.error('Failed to update plan:', err);
       alert('更新失败');
     }
-  };
-
-  const addCandidateStock = () => {
-    setCandidateStocksEdit([
-      ...candidateStocksEdit,
-      { code: '', name: '', buy_reason: '', sell_reason: '', priority: candidateStocksEdit.length + 1 }
-    ]);
-  };
-
-  const updateCandidateStock = (index: number, field: keyof CandidateStockInput, value: string | number) => {
-    const updated = [...candidateStocksEdit];
-    updated[index] = { ...updated[index], [field]: value };
-    setCandidateStocksEdit(updated);
-  };
-
-  const removeCandidateStock = (index: number) => {
-    setCandidateStocksEdit(candidateStocksEdit.filter((_, i) => i !== index));
   };
 
   const daysInMonth = currentMonth.daysInMonth();
@@ -896,62 +876,6 @@ export default function PlanList() {
                       })}
                     </div>
                   )}
-                </div>
-
-                <div className="form-section">
-                  <div className="form-section-title">📈 候选股票</div>
-                  <div style={{ marginTop: '12px' }}>
-                    {candidateStocksEdit.length === 0 ? (
-                      <div style={{ color: '#94a3b8', padding: '20px', textAlign: 'center' }}>暂无候选股票</div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-                        {candidateStocksEdit.map((stock, index) => (
-                          <div key={index} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                              <input
-                                type="text"
-                                placeholder="股票代码"
-                                value={stock.code}
-                                onChange={(e) => updateCandidateStock(index, 'code', e.target.value)}
-                                style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
-                              />
-                              <input
-                                type="text"
-                                placeholder="股票名称"
-                                value={stock.name}
-                                onChange={(e) => updateCandidateStock(index, 'name', e.target.value)}
-                                style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
-                              />
-                              <button
-                                className="btn-icon"
-                                onClick={() => removeCandidateStock(index)}
-                                style={{ padding: '6px 10px', background: '#fee2e2', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#dc2626' }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="买入理由"
-                              value={stock.buy_reason}
-                              onChange={(e) => updateCandidateStock(index, 'buy_reason', e.target.value)}
-                              style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', marginBottom: '4px' }}
-                            />
-                            <input
-                              type="text"
-                              placeholder="卖出理由"
-                              value={stock.sell_reason}
-                              onChange={(e) => updateCandidateStock(index, 'sell_reason', e.target.value)}
-                              style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button className="btn btn-secondary" onClick={addCandidateStock} style={{ marginTop: '12px' }}>
-                      + 添加候选股票
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
