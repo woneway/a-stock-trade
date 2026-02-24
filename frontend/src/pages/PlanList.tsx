@@ -114,7 +114,7 @@ export default function PlanList() {
   const [selectedStrategyIds, setSelectedStrategyIds] = useState<number[]>([]);
   const [strategyStocks, setStrategyStocks] = useState<StrategyStocks[]>([]);
   const [creatingPlan, setCreatingPlan] = useState(false);
-  const [createPlanDate, setCreatePlanDate] = useState(dayjs().add(1, 'day').format('YYYY-MM-DD'));
+  const [createPlanDate, setCreatePlanDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [createWatchIndicators, setCreateWatchIndicators] = useState<string[]>(['涨停数量', '下跌家数', '连板数量']);
   const [createWatchMessages, setCreateWatchMessages] = useState<string[]>(['政策消息', '外围市场']);
 
@@ -464,7 +464,7 @@ export default function PlanList() {
       <div className="page-header">
         <h1>计划列表</h1>
         <button className="btn btn-primary" onClick={() => {
-          setCreatePlanDate(dayjs().add(1, 'day').format('YYYY-MM-DD'));
+          setCreatePlanDate(dayjs().format('YYYY-MM-DD'));
           setShowCreateModal(true);
         }}>
           + 新建计划
