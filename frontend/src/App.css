@@ -208,7 +208,7 @@ body {
 .stat-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
   position: relative;
@@ -3527,9 +3527,9 @@ td .number {
 .plan-item {
   display: flex;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--gray-200);
   cursor: pointer;
   transition: var(--transition);
@@ -3574,10 +3574,40 @@ td .number {
   color: var(--primary);
 }
 
+.plan-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.plan-status.draft {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.plan-status.confirmed {
+  background: #e8f5e9;
+  color: #43a047;
+}
+
+.plan-status.executed {
+  background: #e3f2fd;
+  color: #1e88e5;
+}
+
 .plan-profit {
   font-size: 16px;
   font-weight: 600;
   margin-right: 12px;
+}
+
+.plan-profit.positive {
+  color: #e53935;
+}
+
+.plan-profit.negative {
+  color: #4caf50;
 }
 
 .plan-arrow {
