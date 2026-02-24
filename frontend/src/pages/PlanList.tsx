@@ -220,7 +220,7 @@ export default function PlanList() {
           plan.trades = [];
         }
         plan.trades.push({
-          time: '',
+          time: trade.trade_time || '',
           stock: trade.stock_name || trade.stock_code,
           type: trade.trade_type,
           price: trade.price,
@@ -1101,6 +1101,7 @@ export default function PlanList() {
                 <div className="trade-list">
                   {selectedPlan.trades.map((trade, i) => (
                     <div key={i} className="trade-item">
+                      {trade.time && <span className="trade-time">{trade.time}</span>}
                       <span className={`trade-type ${trade.type === '买入' ? 'buy' : 'sell'}`}>{trade.type}</span>
                       <span className="trade-stock">{trade.stock}</span>
                       <span className="trade-quantity">{trade.quantity}股</span>

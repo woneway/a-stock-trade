@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { positionsApi, tradesApi } from '../services/api';
 import type { Position, Trade } from '../types';
+import dayjs from 'dayjs';
 
 export default function Dashboard() {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -21,7 +22,7 @@ export default function Dashboard() {
         tradesApi.getAll(),
       ]);
       setPositions(positionsRes.data);
-      const today = new Date().toISOString().split('T')[0];
+      const today = dayjs().format('YYYY-MM-DD');
       setTrades(tradesRes.data.filter((t: Trade) => t.trade_date === today));
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -111,8 +112,8 @@ export default function Dashboard() {
             <span className="hero-stat-value">¥{marketValue.toLocaleString()}</span>
           </div>
           <div className="hero-stat">
-            <span className="hero-stat-label">持仓数量</span>
-            <span className="hero-stat-value">{holdingPositions.length}</span>
+            <span className="hero-stat-label">持仓股数</span>
+            <span className="hero-stat-value">{holdingPositions.reduce((sum, p) => sum + p.quantity, 0)}</span>
           </div>
         </div>
       </div>

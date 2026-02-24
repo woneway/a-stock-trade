@@ -4178,6 +4178,8 @@ td .number {
 
 .trade-time {
   color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 60px;
 }
 
 .trade-type {
