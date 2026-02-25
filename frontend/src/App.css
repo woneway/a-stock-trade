@@ -1881,6 +1881,43 @@ td .number {
   animation: fadeIn 0.3s ease;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #2196f3;
+  color: #2196f3;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  background: #2196f3;
+  color: white;
+}
+
+.review-tip {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #1565c0;
+  margin-bottom: 16px;
+}
+
 .review-list {
   display: flex;
   flex-direction: column;
@@ -5555,5 +5592,603 @@ td .number {
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.today-focus-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.today-focus-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.focus-label {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.focus-value {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.focus-value.highlight {
+  background: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+.focus-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.focus-card-header h3 {
+  margin: 0;
+}
+
+.focus-card-header .btn-link {
+  color: white;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.focus-card-header .btn-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.focus-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.focus-item .focus-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.focus-item .focus-value {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sector-tag {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.focus-row.risk {
+  color: #ffeb3b;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reminders-section {
+  margin-bottom: 24px;
+}
+
+.reminders-section h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.reminder-card {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 4px solid #666;
+}
+
+.reminder-card.critical {
+  background: #ffebee;
+  border-left-color: #f44336;
+}
+
+.reminder-card.warning {
+  background: #fff3e0;
+  border-left-color: #ff9800;
+}
+
+.reminder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.reminder-icon {
+  font-size: 18px;
+}
+
+.reminder-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.reminder-desc {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.reminder-card.critical .reminder-title {
+  color: #c62828;
+}
+
+.reminder-card.warning .reminder-title {
+  color: #e65100;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* ===== 新增页面样式 ===== */
+
+/* 复盘列表 */
+.review-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.review-table th,
+.review-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.review-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.review-table td.date-cell {
+  font-weight: 500;
+}
+
+.review-table .weekday {
+  margin-left: 8px;
+  color: #888;
+  font-size: 12px;
+}
+
+.cycle-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cycle-badge.cycle-ice { background: #e3f2fd; color: #1565c0; }
+.cycle-badge.cycle-start { background: #e8f5e9; color: #2e7d32; }
+.cycle-badge.cycle-divergence { background: #fff3e0; color: #ef6c00; }
+.cycle-badge.cycle-peak { background: #fce4ec; color: #c2185b; }
+.cycle-badge.cycle-ebb { background: #ffebee; color: #c62828; }
+
+.sector-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.more-tag {
+  color: #888;
+  font-size: 12px;
+}
+
+.risk-warning {
+  color: #f44336;
+  font-size: 13px;
+}
+
+.risk-cell {
+  max-width: 200px;
+}
+
+/* 筛选器 */
+.filter-bar {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-item label {
+  font-size: 12px;
+  color: #666;
+}
+
+.filter-item input,
+.filter-item select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.filter-item input:focus,
+.filter-item select:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+/* 分页 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 16px;
+}
+
+.page-info {
+  color: #666;
+  font-size: 14px;
+}
+
+/* 复盘详情 */
+.review-detail {
+  max-width: 800px;
+}
+
+.detail-section {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.detail-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.value-display {
+  padding: 10px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.back-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.back-link:hover {
+  color: #2196f3;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 持仓列表 */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-card .card-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.summary-card .card-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.summary-card .card-value.positive {
+  color: #4caf50;
+}
+
+.summary-card .card-value.negative {
+  color: #f44336;
+}
+
+.positions-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.positions-table th,
+.positions-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.positions-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.stock-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-name {
+  font-weight: 500;
+}
+
+.stock-code {
+  font-size: 12px;
+  color: #888;
+}
+
+.positive {
+  color: #4caf50;
+}
+
+.negative {
+  color: #f44336;
+}
+
+.action-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #2196f3;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.btn-link.danger {
+  color: #f44336;
+}
+
+/* 持仓详情 */
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.detail-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-card .card-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.detail-card .card-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-card .card-value.highlight {
+  color: #2196f3;
+  font-size: 22px;
+}
+
+.price-update-form {
+  display: flex;
+  gap: 12px;
+}
+
+.price-update-form input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  flex: 1;
+  max-width: 200px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* 交易历史 */
+.trades-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.trades-table th,
+.trades-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.trades-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  font-size: 13px;
+  color: #333;
+}
+
+.trades-table .reason-cell {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.action-tag.buy {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.action-tag.sell {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-cards,
+  .detail-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+
+  .review-table,
+  .positions-table,
+  .trades-table {
+    overflow-x: auto;
   }
 }

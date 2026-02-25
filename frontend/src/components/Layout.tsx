@@ -4,9 +4,11 @@ import './Layout.css';
 const menuItems = [
   { path: '/', label: '首页', icon: '🏠' },
   { path: '/today', label: '今日计划', icon: '📋' },
-  { path: '/strategy', label: '策略', icon: '🎯' },
+  { path: '/strategies', label: '策略列表', icon: '🎯' },
   { path: '/plans', label: '计划列表', icon: '📊' },
-  { path: '/backtest', label: '回测', icon: '📈' },
+  { path: '/reviews', label: '复盘列表', icon: '📝' },
+  { path: '/positions', label: '持仓列表', icon: '💼' },
+  { path: '/trades', label: '交易记录', icon: '📜' },
   { path: '/settings', label: '设置', icon: '⚙️' },
 ];
 

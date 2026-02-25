@@ -1,6 +1,27 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
+
+interface Review {
+  id?: number;
+  review_date?: string;
+  limit_up_count?: number;
+  limit_down_count?: number;
+  broken_plate_ratio?: number;
+  highest_board?: number;
+  up_count?: number;
+  turnover?: number;
+  market_cycle?: string;
+  position_advice?: string;
+  risk_warning?: string;
+  hot_sectors?: string[];
+  above_20ma?: boolean;
+  index_trend?: string;
+  main_sectors?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface CandidateStock {
   code: string;
@@ -84,6 +105,7 @@ interface StockStatus {
 export default function TodayPlan() {
   const [activeTab, setActiveTab] = useState<'pre' | 'in' | 'post'>('pre');
   const [todayPlan, setTodayPlan] = useState<PrePlan | null>(null);
+  const [latestReview, setLatestReview] = useState<Review | null>(null);
   const [candidateStocks, setCandidateStocks] = useState<CandidateStock[]>([]);
   const [stockStatuses, setStockStatuses] = useState<Record<string, StockStatus>>({});
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -118,7 +140,19 @@ export default function TodayPlan() {
   useEffect(() => {
     loadTodayPlan();
     loadTrades();
+    loadLatestReview();
   }, []);
+
+  const loadLatestReview = async () => {
+    try {
+      const res = await axios.get('/api/reviews/latest');
+      if (res.data && res.data.id) {
+        setLatestReview(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load latest review:', err);
+    }
+  };
 
   const loadTodayPlan = async () => {
     setLoading(true);
@@ -378,6 +412,55 @@ export default function TodayPlan() {
           <div className="tab-content">
             {activeTab === 'pre' && (
               <div className="pre-market">
+                {latestReview && (
+                  <div className="today-focus-card">
+                    <div className="focus-card-header">
+                      <h3>⭐ 昨日复盘回顾</h3>
+                      <a href="/reviews" className="btn-link">查看历史 →</a>
+                    </div>
+                    <div className="focus-grid">
+                      <div className="focus-item">
+                        <span className="focus-label">情绪周期</span>
+                        <span className="focus-value highlight">{latestReview.market_cycle || '-'}</span>
+                      </div>
+                      <div className="focus-item">
+                        <span className="focus-label">仓位建议</span>
+                        <span className="focus-value">{latestReview.position_advice || '-'}</span>
+                      </div>
+                      <div className="focus-item">
+                        <span className="focus-label">大盘位置</span>
+                        <span className="focus-value">{latestReview.above_20ma ? '20日线上 ↑' : '20日线之下'}</span>
+                      </div>
+                      <div className="focus-item">
+                        <span className="focus-label">上涨家数</span>
+                        <span className="focus-value">{latestReview.up_count ?? '-'}</span>
+                      </div>
+                      <div className="focus-item">
+                        <span className="focus-label">成交额</span>
+                        <span className="focus-value">{latestReview.turnover ? `${latestReview.turnover}亿` : '-'}</span>
+                      </div>
+                      <div className="focus-item">
+                        <span className="focus-label">最高连板</span>
+                        <span className="focus-value">{latestReview.highest_board ?? '-'}</span>
+                      </div>
+                    </div>
+                    <div className="focus-row">
+                      <span className="focus-label">热门板块:</span>
+                      <span className="focus-value">
+                        {latestReview.hot_sectors?.slice(0, 3).map((s, i) => (
+                          <span key={i} className="sector-tag">{s}</span>
+                        )) || '-'}
+                      </span>
+                    </div>
+                    {latestReview.risk_warning && (
+                      <div className="focus-row risk">
+                        <span className="focus-label">⚠️ 风险提示:</span>
+                        <span className="focus-value">{latestReview.risk_warning}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="market-env-section">
                   <div className="env-card">
                     <h4>📊 关注指标</h4>
@@ -499,6 +582,32 @@ export default function TodayPlan() {
 
             {activeTab === 'in' && (
               <div className="in-market">
+                <div className="reminders-section">
+                  <h3>⚡ 今日提醒</h3>
+                  <div className="reminder-card critical">
+                    <div className="reminder-header">
+                      <span className="reminder-icon">⚠️</span>
+                      <span className="reminder-title">09:30-10:00 时间止损检查</span>
+                    </div>
+                    <div className="reminder-desc">隔日30分钟未达预期强度立即砍仓</div>
+                    <button className="btn btn-sm">立即检查</button>
+                  </div>
+                  <div className="reminder-card warning">
+                    <div className="reminder-header">
+                      <span className="reminder-icon">⚠️</span>
+                      <span className="reminder-title">10:00 环境检查</span>
+                    </div>
+                    <div className="reminder-desc">天地板≥3家需考虑减仓</div>
+                  </div>
+                  <div className="reminder-card">
+                    <div className="reminder-header">
+                      <span className="reminder-icon">📌</span>
+                      <span className="reminder-title">14:30 尾盘处理</span>
+                    </div>
+                    <div className="reminder-desc">移动止损保护利润</div>
+                  </div>
+                </div>
+
                 {candidateStocks.length === 0 ? (
                   <div className="empty-tip">暂无候选股票</div>
                 ) : (() => {
@@ -712,7 +821,15 @@ export default function TodayPlan() {
                 </div>
 
                 <div className="review-section">
-                  <h3>📝 盘后复盘</h3>
+                  <div className="section-header">
+                    <h3>📝 盘后复盘</h3>
+                    <Link to={`/reviews/new?date=${today}`} className="btn btn-outline">
+                      + 创建正式复盘
+                    </Link>
+                  </div>
+                  <div className="review-tip">
+                    💡 填写下方简略复盘，或点击"创建正式复盘"跳转到复盘列表进行详细记录
+                  </div>
                   <div className="review-form">
                     <div className="form-group">
                       <label>🌡️ 情绪记录</label>

@@ -67,6 +67,10 @@ class Trade(Base):
     amount = Column(Float, nullable=False)
     fee = Column(Float, default=0)
     stamp_duty = Column(Float, default=0)
+    reason = Column(String(50))  # 卖出原因：plan/take_profit_1/take_profit_2/trailing_stop/stop_loss/time_stop/environment_stop/leader_broken/sector_decline/manual
+    stop_loss_price = Column(Float)  # 止损价
+    take_profit_1_price = Column(Float)  # 止盈1价
+    take_profit_2_price = Column(Float)  # 止盈2价
     position_id = Column(Integer, ForeignKey("positions.id"))
     plan_id = Column(Integer, ForeignKey("trading_plans.id"))
     trade_date = Column(Date, nullable=False)
@@ -119,4 +123,25 @@ class AppConfig(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     theme = Column(String(20), default="light")
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class Strategy(Base):
+    """策略模型 - 用于管理交易策略模板"""
+    __tablename__ = "strategies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)
+    description = Column(Text)
+    trade_mode = Column(String(20))  # 龙头/反弹/趋势/波段等
+    entry_conditions = Column(JSON)  # 买入条件
+    exit_conditions = Column(JSON)  # 卖出条件
+    stop_loss_ratio = Column(Float, default=-5)
+    take_profit_ratio = Column(Float, default=10)
+    max_position_ratio = Column(Float, default=20)
+    scenario_handling = Column(JSON)  # 场景处理（炸板、高开低走等）
+    discipline = Column(JSON)  # 纪律要求
+    is_active = Column(Boolean, default=True)
+    is_template = Column(Boolean, default=False)  # 是否为模板
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

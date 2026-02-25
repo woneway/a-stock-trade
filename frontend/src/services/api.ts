@@ -23,10 +23,20 @@ export const watchStockApi = {
 };
 
 export const tradeApi = {
-  getAll: (params?: any) => api.get('/trades', { params }),
+  getAll: (params?: {
+    trade_type?: string;
+    stock_code?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    page_size?: number;
+  }) => api.get('/trades', { params }),
   getById: (id: number) => api.get(`/trades/${id}`),
   create: (data: any) => api.post('/trades', data),
-  getSummary: () => api.get('/trades/summary'),
+  update: (id: number, data: any) => api.put(`/trades/${id}`, data),
+  delete: (id: number) => api.delete(`/trades/${id}`),
+  getSummary: (params?: { start_date?: string; end_date?: string }) =>
+    api.get('/trades/statistics/summary', { params }),
 };
 
 export const tradesApi = tradeApi;
@@ -43,11 +53,14 @@ export const dashboardApi = {
 };
 
 export const positionApi = {
-  getAll: () => api.get('/positions'),
+  getAll: (params?: { status?: string }) => api.get('/positions', { params }),
+  getById: (id: number) => api.get(`/positions/${id}`),
   create: (data: any) => api.post('/positions', data),
   update: (id: number, data: any) => api.put(`/positions/${id}`, data),
   delete: (id: number) => api.delete(`/positions/${id}`),
   close: (id: number) => api.post(`/positions/${id}/close`),
+  updatePrice: (id: number, currentPrice: number) =>
+    api.put(`/positions/${id}/update-price`, null, { params: { current_price: currentPrice } }),
 };
 
 export const positionsApi = positionApi;
@@ -60,10 +73,33 @@ export const alertApi = {
 };
 
 export const strategyApi = {
-  getAll: () => api.get('/strategies'),
+  getAll: (params?: { is_active?: boolean; is_template?: boolean; trade_mode?: string }) =>
+    api.get('/strategies', { params }),
+  getById: (id: number) => api.get(`/strategies/${id}`),
   create: (data: any) => api.post('/strategies', data),
   update: (id: number, data: any) => api.put(`/strategies/${id}`, data),
   delete: (id: number) => api.delete(`/strategies/${id}`),
+  copy: (id: number, newName?: string) =>
+    api.post(`/strategies/${id}/copy`, null, { params: { new_name: newName } }),
+  getModes: () => api.get('/strategies/modes/list'),
+};
+
+export const reviewApi = {
+  getAll: (params?: {
+    review_date?: string;
+    market_cycle?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    page_size?: number;
+  }) => api.get('/reviews', { params }),
+  getById: (id: number) => api.get(`/reviews/${id}`),
+  create: (data: any) => api.post('/reviews', data),
+  update: (id: number, data: any) => api.put(`/reviews/${id}`, data),
+  delete: (id: number) => api.delete(`/reviews/${id}`),
+  getLatest: () => api.get('/reviews/latest'),
+  getCount: (params?: { start_date?: string; end_date?: string }) =>
+    api.get('/reviews/count', { params }),
 };
 
 export const settingsApi = {

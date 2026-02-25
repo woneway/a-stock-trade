@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import plans, positions, trades, dashboard, review, monitor, settings
+from app.api import plans, positions, trades, dashboard, review, monitor, settings, strategy
 from app.database import engine, Base
-from app.models.models import TradingPlan, Position, Trade, Account, RiskConfig, NotificationConfig, AppConfig
+from app.models.models import TradingPlan, Position, Trade, Account, RiskConfig, NotificationConfig, AppConfig, Strategy
 
 app = FastAPI(title="A股交易系统API", version="1.0.0")
 
@@ -23,6 +23,7 @@ app.include_router(trades.router, prefix="/api/v1", tags=["交易记录"])
 app.include_router(review.router, prefix="/api/v1", tags=["复盘"])
 app.include_router(monitor.router, prefix="/api/v1", tags=["监控"])
 app.include_router(settings.router, prefix="/api/v1", tags=["设置"])
+app.include_router(strategy.router, prefix="/api/v1", tags=["策略"])
 
 @app.get("/")
 def root():

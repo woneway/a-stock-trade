@@ -18,6 +18,10 @@ class TradeCreate(BaseModel):
     amount: float
     fee: float = 0
     stamp_duty: float = 0
+    reason: Optional[str] = None  # 卖出原因
+    stop_loss_price: Optional[float] = None
+    take_profit_1_price: Optional[float] = None
+    take_profit_2_price: Optional[float] = None
     position_id: Optional[int] = None
     plan_id: Optional[int] = None
     trade_date: date
@@ -31,6 +35,10 @@ class TradeUpdate(BaseModel):
     amount: Optional[float] = None
     fee: Optional[float] = None
     stamp_duty: Optional[float] = None
+    reason: Optional[str] = None
+    stop_loss_price: Optional[float] = None
+    take_profit_1_price: Optional[float] = None
+    take_profit_2_price: Optional[float] = None
     trade_time: Optional[str] = None
     notes: Optional[str] = None
 
@@ -45,6 +53,10 @@ class TradeResponse(BaseModel):
     amount: float
     fee: float
     stamp_duty: float
+    reason: Optional[str]
+    stop_loss_price: Optional[float]
+    take_profit_1_price: Optional[float]
+    take_profit_2_price: Optional[float]
     position_id: Optional[int]
     plan_id: Optional[int]
     trade_date: date

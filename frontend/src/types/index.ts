@@ -80,6 +80,7 @@ export interface Trade {
   amount: number;
   fee: number;
   stamp_duty: number;
+  reason?: string;
   position_id?: number;
   plan_id?: number;
   trade_date: string;
@@ -187,4 +188,50 @@ export interface Signal {
   type: string;
   message: string;
   stock_code: string;
+}
+
+// ===== 新增类型 =====
+
+export interface Strategy {
+  id: number;
+  name: string;
+  description?: string;
+  trade_mode?: string;
+  entry_conditions?: Record<string, unknown>;
+  exit_conditions?: Record<string, unknown>;
+  stop_loss_ratio: number;
+  take_profit_ratio: number;
+  max_position_ratio: number;
+  scenario_handling?: Record<string, unknown>;
+  discipline?: Record<string, unknown>;
+  is_active: boolean;
+  is_template: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewListItem {
+  id: number;
+  review_date: string;
+  market_cycle?: string;
+  position_advice?: string;
+  risk_warning?: string;
+  hot_sectors?: string[];
+  up_count?: number;
+  turnover?: number;
+  created_at: string;
+}
+
+export interface PositionWithTrades extends Position {
+  trades: Trade[];
+}
+
+export interface TradeStatistics {
+  total_trades: number;
+  buy_count: number;
+  sell_count: number;
+  total_buy_amount: number;
+  total_sell_amount: number;
+  total_fees: number;
+  net_profit: number;
 }
