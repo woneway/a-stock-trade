@@ -66,8 +66,8 @@ export default function Backtest() {
 
   const fetchStrategies = async () => {
     try {
-      const res = await axios.get('/api/backtest/strategies');
-      setStrategies(res.data.strategies);
+      const res = await axios.get('/api/strategies');
+      setStrategies(res.data);
     } catch (err) {
       console.error('Failed to fetch strategies:', err);
     }

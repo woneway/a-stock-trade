@@ -6,6 +6,7 @@ const menuItems = [
   { path: '/today', label: '今日计划', icon: '📋' },
   { path: '/strategy', label: '策略', icon: '🎯' },
   { path: '/plans', label: '计划列表', icon: '📊' },
+  { path: '/backtest', label: '回测', icon: '📈' },
   { path: '/settings', label: '设置', icon: '⚙️' },
 ];
 
