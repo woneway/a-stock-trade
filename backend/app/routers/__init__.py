@@ -1,1 +1,33 @@
-# Routers package
+from app.routers import (
+    alert,
+    backtest,
+    dashboard,
+    data_sync,
+    external_data,
+    market,
+    plan,
+    position,
+    settings,
+    stock,
+    strategy,
+    strategy_scan,
+    trade,
+    watch_stock,
+)
+
+__all__ = [
+    "alert",
+    "backtest",
+    "dashboard",
+    "data_sync",
+    "external_data",
+    "market",
+    "plan",
+    "position",
+    "settings",
+    "stock",
+    "strategy",
+    "strategy_scan",
+    "trade",
+    "watch_stock",
+]
