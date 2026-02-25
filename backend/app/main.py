@@ -15,10 +15,10 @@ from app.routers import (
     dashboard,
     stock,
     strategy_scan,
-    backtest,
     data_sync,
     external_data,
 )
+from app.routers.backtest import router as backtest_router
 
 
 @asynccontextmanager
@@ -168,7 +168,7 @@ app.include_router(strategy.router)
 app.include_router(dashboard.router)
 app.include_router(stock.router)
 app.include_router(strategy_scan.router)
-app.include_router(backtest.router)
+app.include_router(backtest_router)
 app.include_router(data_sync.router)
 app.include_router(external_data.router)
 
