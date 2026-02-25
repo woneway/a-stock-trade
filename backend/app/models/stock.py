@@ -9,6 +9,7 @@ class Stock(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     code: str = Field(index=True)
     name: str
+    market: Optional[str] = Field(default=None, alias="market", index=True)
     sector: Optional[str] = Field(default=None, index=True)
 
     # 行情数据

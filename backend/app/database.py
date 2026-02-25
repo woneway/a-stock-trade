@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, create_engine
 from sqlalchemy.pool import StaticPool
 from app.config import settings
+from app.models import stock, external_data  # noqa: F401
 
 connect_args = {}
 if "sqlite" in settings.DATABASE_URL:

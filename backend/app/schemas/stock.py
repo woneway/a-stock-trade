@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, Any, Dict
 
 
 class StockBase(BaseModel):
@@ -8,6 +8,7 @@ class StockBase(BaseModel):
 
     code: str
     name: str
+    market: Optional[str] = None
     sector: Optional[str] = None
     price: Optional[float] = None
     change: Optional[float] = None
@@ -28,6 +29,7 @@ class StockCreate(StockBase):
 class StockUpdate(BaseModel):
     code: Optional[str] = None
     name: Optional[str] = None
+    market: Optional[str] = None
     sector: Optional[str] = None
     price: Optional[float] = None
     change: Optional[float] = None

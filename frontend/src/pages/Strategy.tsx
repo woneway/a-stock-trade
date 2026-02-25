@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface Strategy {
@@ -123,6 +124,7 @@ interface ScanResult {
 }
 
 export default function Strategy() {
+  const navigate = useNavigate();
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
@@ -447,6 +449,9 @@ export default function Strategy() {
       <div className="page-header">
         <h1>策略管理</h1>
         <div className="header-actions">
+          <button className="btn btn-secondary" onClick={() => navigate('/backtest')}>
+            策略回测
+          </button>
           <button className="btn btn-primary" onClick={openCreateModal}>
             + 创建策略
           </button>

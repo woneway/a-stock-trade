@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables
@@ -14,6 +15,9 @@ from app.routers import (
     dashboard,
     stock,
     strategy_scan,
+    backtest,
+    data_sync,
+    external_data,
 )
 
 
@@ -144,6 +148,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(market.router)
 app.include_router(watch_stock.router)
 app.include_router(watch_stock.router_alias)
@@ -156,6 +168,9 @@ app.include_router(strategy.router)
 app.include_router(dashboard.router)
 app.include_router(stock.router)
 app.include_router(strategy_scan.router)
+app.include_router(backtest.router)
+app.include_router(data_sync.router)
+app.include_router(external_data.router)
 
 
 @app.get("/health")

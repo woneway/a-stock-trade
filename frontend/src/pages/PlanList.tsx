@@ -112,6 +112,7 @@ interface PrePlan {
 interface Trade {
   id: number;
   trade_date: string;
+  trade_time?: string;
   stock_code: string;
   stock_name: string;
   trade_type: string;

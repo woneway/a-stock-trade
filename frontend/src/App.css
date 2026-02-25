@@ -5328,3 +5328,232 @@ td .number {
   justify-content: flex-end;
   margin-top: 8px;
 }
+
+/* Backtest Page Styles */
+.backtest-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.backtest-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.backtest-page .page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.backtest-container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+}
+
+.backtest-form-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  height: fit-content;
+}
+
+.backtest-form-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.backtest-form-section .form-group {
+  margin-bottom: 16px;
+}
+
+.backtest-form-section .form-group label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.backtest-form-section .form-group input,
+.backtest-form-section .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.backtest-form-section button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+}
+
+.backtest-result-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.backtest-result-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-summary .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-summary .summary-item .label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.result-summary .summary-item .value {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.result-summary .summary-item .value.highlight {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-card .stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.stat-card .stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stat-card .stat-value.positive {
+  color: var(--success);
+}
+
+.stat-card .stat-value.negative {
+  color: var(--danger);
+}
+
+.equity-curve h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.curve-chart {
+  height: 300px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.simple-chart {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  gap: 2px;
+}
+
+.simple-chart .chart-point {
+  flex: 1;
+  min-width: 2px;
+  transition: opacity 0.2s;
+}
+
+.simple-chart .chart-point:hover {
+  opacity: 0.8;
+}
+
+.error-message {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.error-message h3 {
+  color: var(--danger);
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.error-message p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.empty-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 1200px) {
+  .backtest-container {
+    grid-template-columns: 1fr;
+  }
+
+  .result-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .result-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
