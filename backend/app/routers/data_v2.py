@@ -130,31 +130,42 @@ def get_data_stats():
 
 
 # ========== Akshare 函数查询 ==========
-# 完整的 akshare 函数列表
+# 完整的 akshare A股接口列表
+# 分类体系：宏观(政策/经济) -> 中观(板块/行业/概念) -> 微观(个股)
+# 游资常用接口重点标注
 AKSHARE_FUNCTIONS = {
-    # ========== 股票行情 ==========
+
+    # ========================================
+    # 一、微观 - 个股数据 (最爱用)
+    # ========================================
+
+    # ------ 个股行情 ------
     "stock_zh_a_hist": {
         "name": "stock_zh_a_hist",
-        "description": "A股历史K线数据",
-        "category": "股票行情",
+        "description": "A股历史K线",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id21",
         "params": [
-            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
-            {"name": "period", "default": "daily", "description": "周期", "required": False, "type": "str"},
-            {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
-            {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
-            {"name": "adjust", "default": "qfq", "description": "复权类型", "required": False, "type": "str"},
+            {"name": "symbol", "default": "600519", "description": "股票代码(6位)", "required": True, "type": "str"},
+            {"name": "period", "default": "daily", "description": "周期: daily/weekly/monthly", "required": False, "type": "str"},
+            {"name": "start_date", "default": "20250101", "description": "开始日期YYYYMMDD", "required": True, "type": "str"},
+            {"name": "end_date", "default": "20250227", "description": "结束日期YYYYMMDD", "required": True, "type": "str"},
+            {"name": "adjust", "default": "qfq", "description": "复权: qfq/hfq/空字符串", "required": False, "type": "str"},
         ]
     },
     "stock_zh_a_spot_em": {
         "name": "stock_zh_a_spot_em",
-        "description": "A股实时行情(全部)",
-        "category": "股票行情",
-        "params": []
+        "description": "A股实时行情【游资最爱】",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id2",
+        "params": [],
+        "remark": "返回全部A股实时行情，包含涨跌幅、换手率、量比等核心指标"
     },
     "stock_zh_a_hist_sina": {
         "name": "stock_zh_a_hist_sina",
-        "description": "新浪A股历史数据",
-        "category": "股票行情",
+        "description": "新浪A股历史",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id22",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -162,216 +173,97 @@ AKSHARE_FUNCTIONS = {
     "stock_zh_a_minute": {
         "name": "stock_zh_a_minute",
         "description": "A股分时数据",
-        "category": "股票行情",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id20",
         "params": [
-            {"name": "symbol", "default": "sh000001", "description": "股票代码", "required": True, "type": "str"},
-            {"name": "period", "default": "5", "description": "周期(1/5/15/30/60)", "required": False, "type": "str"},
-            {"name": "adjust", "default": "qfq", "description": "复权类型", "required": False, "type": "str"},
+            {"name": "symbol", "default": "sh000001", "description": "股票代码(sh/sz+代码)", "required": True, "type": "str"},
+            {"name": "period", "default": "5", "description": "周期: 1/5/15/30/60", "required": False, "type": "str"},
+            {"name": "adjust", "default": "qfq", "description": "复权", "required": False, "type": "str"},
         ]
     },
     "stock_zh_a_cw_daily": {
         "name": "stock_zh_a_cw_daily",
-        "description": "A股筹码分布日线",
-        "category": "股票行情",
+        "description": "A股筹码分布",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id24",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
             {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
             {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
         ]
     },
-
-    # ========== 指数行情 ==========
-    "stock_zh_index_daily": {
-        "name": "stock_zh_index_daily",
-        "description": "A股指数日K线",
-        "category": "指数行情",
+    "stock_zh_daily_sina": {
+        "name": "stock_zh_daily_sina",
+        "description": "A股日K线",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id25",
         "params": [
-            {"name": "symbol", "default": "sh000001", "description": "指数代码", "required": True, "type": "str"},
+            {"name": "symbol", "default": "sh600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
-    "stock_zh_index_spot": {
-        "name": "stock_zh_index_spot",
-        "description": "A股指数实时行情",
-        "category": "指数行情",
-        "params": []
-    },
-    "stock_zh_index_cons": {
-        "name": "stock_zh_index_cons",
-        "description": "指数成分股",
-        "category": "指数行情",
+    "stock_zh_tick_tx": {
+        "name": "stock_zh_tick_tx",
+        "description": "A股逐笔成交(腾讯)",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id27",
         "params": [
-            {"name": "symbol", "default": "sh000001", "description": "指数代码", "required": True, "type": "str"},
+            {"name": "symbol", "default": "000001", "description": "股票代码", "required": True, "type": "str"},
+            {"name": "date", "default": "20250110", "description": "日期YYYYMMDD", "required": True, "type": "str"},
         ]
     },
-
-    # ========== 涨跌停数据 ==========
-    "stock_zh_a_limit_up_em": {
-        "name": "stock_zh_a_limit_up_em",
-        "description": "A股涨停板",
-        "category": "涨跌停",
+    "stock_zh_tick_js": {
+        "name": "stock_zh_tick_js",
+        "description": "A股逐笔成交(精简)",
+        "category": "微观-个股行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id28",
         "params": [
-            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+            {"name": "symbol", "default": "000001", "description": "股票代码", "required": True, "type": "str"},
+            {"name": "date", "default": "20250110", "description": "日期YYYYMMDD", "required": True, "type": "str"},
         ]
-    },
-    "stock_zh_a_limit_down_em": {
-        "name": "stock_zh_a_limit_down_em",
-        "description": "A股跌停板",
-        "category": "涨跌停",
-        "params": [
-            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
-        ]
-    },
-    "stock_zh_a_limit_up_sina": {
-        "name": "stock_zh_a_limit_up_sina",
-        "description": "新浪涨停板",
-        "category": "涨跌停",
-        "params": []
     },
 
-    # ========== 资金流向 ==========
+    # ------ 个股资金流向【游资必看】------
     "stock_individual_fund_flow": {
         "name": "stock_individual_fund_flow",
-        "description": "个股资金流向",
-        "category": "资金流向",
+        "description": "个股资金流向【游资最爱】",
+        "category": "微观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id47",
         "params": [
             {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
-            {"name": "market", "default": "上海A股", "description": "市场", "required": False, "type": "str"},
-        ]
+            {"name": "market", "default": "上海A股", "description": "市场: 上海A股/深圳A股", "required": False, "type": "str"},
+        ],
+        "remark": "返回单日主力资金流向，超大单/大单/中单/小单净流入"
     },
     "stock_individual_fund_flow_stick": {
         "name": "stock_individual_fund_flow_stick",
-        "description": "个股资金流向(支持多日)",
-        "category": "资金流向",
+        "description": "个股资金流向(多日)",
+        "category": "微观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id48",
         "params": [
             {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
             {"name": "market", "default": "上海A股", "description": "市场", "required": False, "type": "str"},
         ]
     },
-    "stock_sector_fund_flow_rank": {
-        "name": "stock_sector_fund_flow_rank",
-        "description": "板块资金流向排名",
-        "category": "资金流向",
-        "params": [
-            {"name": "indicator", "default": "今日", "description": "指标(今日/5日/10日)", "required": False, "type": "str"},
-            {"name": "sector_type", "default": "行业资金流", "description": "板块类型", "required": False, "type": "str"},
-        ]
-    },
-    "stock_fund_flow": {
-        "name": "stock_fund_flow",
-        "description": "大盘资金流向",
-        "category": "资金流向",
-        "params": []
-    },
 
-    # ========== 龙虎榜 ==========
+    # ------ 个股龙虎榜 ------
     "stock_lhb_detail_em": {
         "name": "stock_lhb_detail_em",
-        "description": "龙虎榜详情",
-        "category": "龙虎榜",
+        "description": "龙虎榜详情【游资必看】",
+        "category": "微观-龙虎榜",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id56",
         "params": [
             {"name": "start_date", "default": "", "description": "开始日期", "required": False, "type": "str"},
             {"name": "end_date", "default": "", "description": "结束日期", "required": False, "type": "str"},
-        ]
-    },
-    "stock_lh_yyb_most": {
-        "name": "stock_lh_yyb_most",
-        "description": "龙虎榜营业部排行-上榜次数",
-        "category": "龙虎榜",
-        "params": []
-    },
-    "stock_lh_yyb_capital": {
-        "name": "stock_lh_yyb_capital",
-        "description": "龙虎榜营业部排行-资金实力",
-        "category": "龙虎榜",
-        "params": []
-    },
-    "stock_lhb_hyyyb_em": {
-        "name": "stock_lhb_hyyyb_em",
-        "description": "每日活跃营业部",
-        "category": "龙虎榜",
-        "params": [
-            {"name": "start_date", "default": "", "description": "开始日期", "required": False, "type": "str"},
-            {"name": "end_date", "default": "", "description": "结束日期", "required": False, "type": "str"},
-        ]
-    },
-    "stock_sina_lhb_jgzz": {
-        "name": "stock_sina_lhb_jgzz",
-        "description": "机构席位追踪",
-        "category": "龙虎榜",
-        "params": [
-            {"name": "recent_day", "default": "5", "description": "天数", "required": False, "type": "str"},
-        ]
-    },
-    "stock_zt_pool_em": {
-        "name": "stock_zt_pool_em",
-        "description": "涨停板池",
-        "category": "龙虎榜",
-        "params": [
-            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
-        ]
+        ],
+        "remark": "返回龙虎榜上榜股票，机构买入/卖出金额"
     },
 
-    # ========== 板块数据 ==========
-    "stock_board_industry_name_em": {
-        "name": "stock_board_industry_name_em",
-        "description": "行业板块行情",
-        "category": "板块数据",
-        "params": []
-    },
-    "stock_board_concept_name_em": {
-        "name": "stock_board_concept_name_em",
-        "description": "概念板块行情",
-        "category": "板块数据",
-        "params": []
-    },
-    "stock_board_industry_cons_em": {
-        "name": "stock_board_industry_cons_em",
-        "description": "行业板块成分股",
-        "category": "板块数据",
-        "params": [
-            {"name": "symbol", "default": "半导体", "description": "板块名称", "required": True, "type": "str"},
-        ]
-    },
-    "stock_board_concept_cons_em": {
-        "name": "stock_board_concept_cons_em",
-        "description": "概念板块成分股",
-        "category": "板块数据",
-        "params": [
-            {"name": "symbol", "default": "人工智能", "description": "板块名称", "required": True, "type": "str"},
-        ]
-    },
-
-    # ========== 股票信息 ==========
-    "stock_info_a_code_name": {
-        "name": "stock_info_a_code_name",
-        "description": "A股代码名称列表",
-        "category": "股票信息",
-        "params": []
-    },
-    "stock_szse_sse_info": {
-        "name": "stock_szse_sse_info",
-        "description": "深交所/上交所信息",
-        "category": "股票信息",
-        "params": []
-    },
-    "stock_info_global_sci_em": {
-        "name": "stock_info_global_sci_em",
-        "description": "全球市场重要指数",
-        "category": "股票信息",
-        "params": []
-    },
-    "stock_info_hk_sell_em": {
-        "name": "stock_info_hk_sell_em",
-        "description": "港股卖空数据",
-        "category": "股票信息",
-        "params": []
-    },
-
-    # ========== 财务数据 ==========
+    # ------ 个股财务数据 ------
     "stock_financial_abstract": {
         "name": "stock_financial_abstract",
         "description": "财务摘要",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id81",
         "params": [
             {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -379,7 +271,8 @@ AKSHARE_FUNCTIONS = {
     "stock_financial_analysis_indicator": {
         "name": "stock_financial_analysis_indicator",
         "description": "财务分析指标",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id82",
         "params": [
             {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
             {"name": "indicator", "default": "按报告期", "description": "指标类型", "required": False, "type": "str"},
@@ -388,7 +281,8 @@ AKSHARE_FUNCTIONS = {
     "stock_yjbb_em": {
         "name": "stock_yjbb_em",
         "description": "业绩报表",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id83",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -396,7 +290,8 @@ AKSHARE_FUNCTIONS = {
     "stock_yysj_em": {
         "name": "stock_yysj_em",
         "description": "营业数据",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id84",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -404,7 +299,8 @@ AKSHARE_FUNCTIONS = {
     "stock_fh_em": {
         "name": "stock_fh_em",
         "description": "分红送转",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id85",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -412,87 +308,19 @@ AKSHARE_FUNCTIONS = {
     "stock_gpwy_em": {
         "name": "stock_gpwy_em",
         "description": "股本演变",
-        "category": "财务数据",
+        "category": "微观-财务数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id86",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
 
-    # ========== 沪深港通 ==========
-    "stock_hsgt_top10_em": {
-        "name": "stock_hsgt_top10_em",
-        "description": "沪深港通top10",
-        "category": "沪深港通",
-        "params": [
-            {"name": "symbol", "default": "北向", "description": "类型(北向/南向)", "required": True, "type": "str"},
-            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
-        ]
-    },
-    "stock_hsgt_hist_em": {
-        "name": "stock_hsgt_hist_em",
-        "description": "沪深港通历史数据",
-        "category": "沪深港通",
-        "params": []
-    },
-    "stock_hsgt_sse_sgt_em": {
-        "name": "stock_hsgt_sse_sgt_em",
-        "description": "沪深港通持股标的",
-        "category": "沪深港通",
-        "params": []
-    },
-
-    # ========== 新股数据 ==========
-    "stock_ipo_info_em": {
-        "name": "stock_ipo_info_em",
-        "description": "新股上市信息",
-        "category": "新股数据",
-        "params": []
-    },
-    "stock_ipo_bis_em": {
-        "name": "stock_ipo_bis_em",
-        "description": "新股申购",
-        "category": "新股数据",
-        "params": []
-    },
-
-    # ========== 复权数据 ==========
-    "stock_daily_adj_em": {
-        "name": "stock_daily_adj_em",
-        "description": "日线复权数据",
-        "category": "复权数据",
-        "params": [
-            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
-            {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
-            {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
-            {"name": "adjust", "default": "qfq", "description": "复权类型", "required": False, "type": "str"},
-        ]
-    },
-
-    # ========== 大盘数据 ==========
-    "stock_zh_a_treda": {
-        "name": "stock_zh_a_treda",
-        "description": "A股市场总貌",
-        "category": "大盘数据",
-        "params": []
-    },
-    "stock_zh_a_tredb": {
-        "name": "stock_zh_a_tredb",
-        "description": "A股市场交易详情",
-        "category": "大盘数据",
-        "params": []
-    },
-    "stock_zh_a_trade": {
-        "name": "stock_zh_a_trade",
-        "description": "A股市场资金流向",
-        "category": "大盘数据",
-        "params": []
-    },
-
-    # ========== 融资融券 ==========
+    # ------ 个股融资融券 ------
     "stock_rzrq_em": {
         "name": "stock_rzrq_em",
         "description": "融资融券",
-        "category": "融资融券",
+        "category": "微观-融资融券",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id111",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
             {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
@@ -501,23 +329,19 @@ AKSHARE_FUNCTIONS = {
     "stock_rzrq_detail_em": {
         "name": "stock_rzrq_detail_em",
         "description": "融资融券明细",
-        "category": "融资融券",
+        "category": "微观-融资融券",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id112",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
-    "stock_rzrq_fund_flow": {
-        "name": "stock_rzrq_fund_flow",
-        "description": "融资融券资金流向",
-        "category": "融资融券",
-        "params": []
-    },
 
-    # ========== 限售股 ==========
+    # ------ 个股限售股 ------
     "stock_xsg_fp_em": {
         "name": "stock_xsg_fp_em",
         "description": "限售股解禁",
-        "category": "限售股",
+        "category": "微观-限售股",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id115",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
@@ -525,105 +349,411 @@ AKSHARE_FUNCTIONS = {
     "stock_xsg_hold_em": {
         "name": "stock_xsg_hold_em",
         "description": "限售股持股",
-        "category": "限售股",
+        "category": "微观-限售股",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id116",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
 
-    # ========== 大宗交易 ==========
+    # ------ 个股大宗交易 ------
     "stock_dzjy_em": {
         "name": "stock_dzjy_em",
         "description": "大宗交易",
-        "category": "大宗交易",
+        "category": "微观-大宗交易",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id117",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
 
-    # ========== 股东人数 ==========
+    # ------ 个股股东数据 ------
     "stock_zh_gbqy_em": {
         "name": "stock_zh_gbqy_em",
         "description": "股东人数变化",
-        "category": "股东数据",
+        "category": "微观-股东数据",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id118",
         "params": [
             {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
         ]
     },
 
-    # ========== 机构调研 ==========
+    # ------ 个股资讯 ------
+    "stock_news_em": {
+        "name": "stock_news_em",
+        "description": "个股新闻",
+        "category": "微观-资讯",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id127",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
+    "stock_notice_em": {
+        "name": "stock_notice_em",
+        "description": "个股公告",
+        "category": "微观-资讯",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id128",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
     "stock_jgzy_em": {
         "name": "stock_jgzy_em",
         "description": "机构调研",
-        "category": "机构调研",
-        "params": []
+        "category": "微观-资讯",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id130",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
     },
 
-    # ========== 资金流向 ==========
+
+    # ========================================
+    # 二、中观 - 板块/行业/概念数据 (核心)
+    # ========================================
+
+    # ------ 涨跌停数据【游资必看】------
+    "stock_zh_a_limit_up_em": {
+        "name": "stock_zh_a_limit_up_em",
+        "description": "涨停板【游资最爱】",
+        "category": "中观-涨跌停",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id3",
+        "params": [
+            {"name": "date", "default": "", "description": "日期YYYYMMDD", "required": False, "type": "str"},
+        ],
+        "remark": "返回当日涨停股票列表，包含代码、名称、涨停原因、封板金额"
+    },
+    "stock_zh_a_limit_down_em": {
+        "name": "stock_zh_a_limit_down_em",
+        "description": "跌停板",
+        "category": "中观-涨跌停",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id4",
+        "params": [
+            {"name": "date", "default": "", "description": "日期YYYYMMDD", "required": False, "type": "str"},
+        ]
+    },
+    "stock_zh_a_limit_up_sina": {
+        "name": "stock_zh_a_limit_up_sina",
+        "description": "新浪涨停板",
+        "category": "中观-涨跌停",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id5",
+        "params": []
+    },
+    "stock_zt_pool_em": {
+        "name": "stock_zt_pool_em",
+        "description": "涨停板池【游资常用】",
+        "category": "中观-涨跌停",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id59",
+        "params": [
+            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+        ]
+    },
+    "stock_zt_pool_strong_em": {
+        "name": "stock_zt_pool_strong_em",
+        "description": "强势涨停池",
+        "category": "中观-涨跌停",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id60",
+        "params": [
+            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+        ]
+    },
+
+    # ------ 板块行情 ------
+    "stock_board_industry_name_em": {
+        "name": "stock_board_industry_name_em",
+        "description": "行业板块行情",
+        "category": "中观-板块行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id29",
+        "params": [],
+        "remark": "返回行业板块涨跌排名，看板块轮动"
+    },
+    "stock_board_concept_name_em": {
+        "name": "stock_board_concept_name_em",
+        "description": "概念板块行情",
+        "category": "中观-板块行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id30",
+        "params": [],
+        "remark": "返回概念板块涨跌排名，找题材热点"
+    },
+    "stock_board_industry_cons_em": {
+        "name": "stock_board_industry_cons_em",
+        "description": "行业板块成分股",
+        "category": "中观-板块行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id31",
+        "params": [
+            {"name": "symbol", "default": "半导体", "description": "板块名称", "required": True, "type": "str"},
+        ]
+    },
+    "stock_board_concept_cons_em": {
+        "name": "stock_board_concept_cons_em",
+        "description": "概念板块成分股",
+        "category": "中观-板块行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id32",
+        "params": [
+            {"name": "symbol", "default": "人工智能", "description": "板块名称", "required": True, "type": "str"},
+        ]
+    },
+
+    # ------ 板块资金流向【游资必看】------
+    "stock_sector_fund_flow_rank": {
+        "name": "stock_sector_fund_flow_rank",
+        "description": "板块资金流向排名【游资最爱】",
+        "category": "中观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id50",
+        "params": [
+            {"name": "indicator", "default": "今日", "description": "指标: 今日/5日/10日/20日", "required": False, "type": "str"},
+            {"name": "sector_type", "default": "行业资金流", "description": "板块类型: 行业资金流/概念资金流", "required": False, "type": "str"},
+        ],
+        "remark": "返回行业/概念板块资金净流入排名，主力资金方向"
+    },
+
+    # ------ 大盘资金流向 ------
+    "stock_fund_flow": {
+        "name": "stock_fund_flow",
+        "description": "大盘资金流向",
+        "category": "中观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id51",
+        "params": []
+    },
     "stock_market_fund_flow": {
         "name": "stock_market_fund_flow",
         "description": "市场资金流向",
-        "category": "资金流向",
+        "category": "中观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id52",
         "params": []
     },
     "stock_fund_flow_ggyl": {
         "name": "stock_fund_flow_ggyl",
         "description": "资金流向-归公流向",
-        "category": "资金流向",
+        "category": "中观-资金流向",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id53",
         "params": []
     },
 
-    # ========== 期货数据 ==========
-    "futures_zh_daily_sina": {
-        "name": "futures_zh_daily_sina",
-        "description": "期货日线数据",
-        "category": "期货数据",
+    # ------ 龙虎榜营业部【游资核心】------
+    "stock_lh_yyb_most": {
+        "name": "stock_lh_yyb_most",
+        "description": "龙虎榜营业部-上榜次数【游资必看】",
+        "category": "中观-龙虎榜",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id57",
+        "params": [],
+        "remark": "返回龙虎榜上榜次数最多的营业部，游资席位追踪"
+    },
+    "stock_lh_yyb_capital": {
+        "name": "stock_lh_yyb_capital",
+        "description": "龙虎榜营业部-资金实力",
+        "category": "中观-龙虎榜",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id58",
+        "params": [],
+        "remark": "返回龙虎榜买入金额最大的营业部"
+    },
+    "stock_lhb_hyyyb_em": {
+        "name": "stock_lhb_hyyyb_em",
+        "description": "每日活跃营业部",
+        "category": "中观-龙虎榜",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id61",
         "params": [
-            {"name": "symbol", "default": "RU9999", "description": "期货代码", "required": True, "type": "str"},
+            {"name": "start_date", "default": "", "description": "开始日期", "required": False, "type": "str"},
+            {"name": "end_date", "default": "", "description": "结束日期", "required": False, "type": "str"},
         ]
     },
-    "futures_zh_spot": {
-        "name": "futures_zh_spot",
-        "description": "期货实时行情",
-        "category": "期货数据",
-        "params": []
-    },
-
-    # ========== 期权数据 ==========
-    "opt_em_daily_sina": {
-        "name": "opt_em_daily_sina",
-        "description": "期权日线数据",
-        "category": "期权数据",
+    "stock_sina_lhb_jgzz": {
+        "name": "stock_sina_lhb_jgzz",
+        "description": "机构席位追踪",
+        "category": "中观-龙虎榜",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id62",
         "params": [
-            {"name": "symbol", "default": "510050C2306", "description": "期权代码", "required": True, "type": "str"},
+            {"name": "recent_day", "default": "5", "description": "天数: 5/10/30", "required": False, "type": "str"},
         ]
     },
-    "opt_em_spot_sina": {
-        "name": "opt_em_spot_sina",
-        "description": "期权实时行情",
-        "category": "期权数据",
+
+
+    # ========================================
+    # 三、宏观 - 市场整体数据 (判断大势)
+    # ========================================
+
+    # ------ 指数行情 ------
+    "stock_zh_index_daily": {
+        "name": "stock_zh_index_daily",
+        "description": "指数日K线",
+        "category": "宏观-指数行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id17",
+        "params": [
+            {"name": "symbol", "default": "sh000001", "description": "指数代码(sh000001上证指数/sh399001深证成指)", "required": True, "type": "str"},
+        ]
+    },
+    "stock_zh_index_spot": {
+        "name": "stock_zh_index_spot",
+        "description": "指数实时行情",
+        "category": "宏观-指数行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id18",
+        "params": []
+    },
+    "stock_zh_index_cons": {
+        "name": "stock_zh_index_cons",
+        "description": "指数成分股",
+        "category": "宏观-指数行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id19",
+        "params": [
+            {"name": "symbol", "default": "sh000001", "description": "指数代码", "required": True, "type": "str"},
+        ]
+    },
+
+    # ------ 大盘行情 ------
+    "stock_zh_a_treda": {
+        "name": "stock_zh_a_treda",
+        "description": "A股市场总貌",
+        "category": "宏观-大盘行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id1",
+        "params": [],
+        "remark": "返回沪深两市涨跌家数、成交额等总貌数据"
+    },
+    "stock_zh_a_tredb": {
+        "name": "stock_zh_a_tredb",
+        "description": "A股市场交易详情",
+        "category": "宏观-大盘行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id1",
+        "params": []
+    },
+    "stock_zh_a_trade": {
+        "name": "stock_zh_a_trade",
+        "description": "A股市场资金流向",
+        "category": "宏观-大盘行情",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id1",
         "params": []
     },
 
-    # ========== 可转债 ==========
-    "bond_zh_hs_cov": {
-        "name": "bond_zh_hs_cov",
-        "description": "可转债数据",
-        "category": "可转债",
+    # ------ 沪深港通 ------
+    "stock_hsgt_top10_em": {
+        "name": "stock_hsgt_top10_em",
+        "description": "沪深港通top10",
+        "category": "宏观-沪深港通",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id63",
+        "params": [
+            {"name": "symbol", "default": "北向", "description": "类型: 北向/南向", "required": True, "type": "str"},
+            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+        ]
+    },
+    "stock_hsgt_hist_em": {
+        "name": "stock_hsgt_hist_em",
+        "description": "沪深港通历史数据",
+        "category": "宏观-沪深港通",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id64",
         "params": []
     },
-    "bond_zh_hs_cov_spot": {
-        "name": "bond_zh_hs_cov_spot",
-        "description": "可转债实时行情",
-        "category": "可转债",
+    "stock_hsgt_sse_sgt_em": {
+        "name": "stock_hsgt_sse_sgt_em",
+        "description": "沪深港通持股标的",
+        "category": "宏观-沪深港通",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id65",
+        "params": []
+    },
+    "stock_hsgt_em": {
+        "name": "stock_hsgt_em",
+        "description": "沪深港通持股",
+        "category": "宏观-沪深港通",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id66",
+        "params": [
+            {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
+
+    # ------ 融资融券汇总 ------
+    "stock_rzrq_fund_flow": {
+        "name": "stock_rzrq_fund_flow",
+        "description": "融资融券资金流向",
+        "category": "宏观-融资融券",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id113",
+        "params": []
+    },
+    "stock_rzrq_latest": {
+        "name": "stock_rzrq_latest",
+        "description": "融资融券最新",
+        "category": "宏观-融资融券",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id114",
         "params": []
     },
 
-    # ========== 基金数据 ==========
+
+    # ========================================
+    # 四、股票基础信息
+    # ========================================
+
+    # ------ 股票列表 ------
+    "stock_info_a_code_name": {
+        "name": "stock_info_a_code_name",
+        "description": "A股代码名称列表",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id68",
+        "params": []
+    },
+    "stock_info_global_sci_em": {
+        "name": "stock_info_global_sci_em",
+        "description": "全球市场重要指数",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id67",
+        "params": []
+    },
+    "stock_szse_sse_info": {
+        "name": "stock_szse_sse_info",
+        "description": "深交所/上交所信息",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id69",
+        "params": []
+    },
+
+    # ------ 新股数据 ------
+    "stock_ipo_info_em": {
+        "name": "stock_ipo_info_em",
+        "description": "新股上市信息",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id70",
+        "params": []
+    },
+    "stock_ipo_bis_em": {
+        "name": "stock_ipo_bis_em",
+        "description": "新股申购",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id71",
+        "params": []
+    },
+
+    # ------ 复权数据 ------
+    "stock_daily_adj_em": {
+        "name": "stock_daily_adj_em",
+        "description": "日线复权数据",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id23",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+            {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
+            {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
+            {"name": "adjust", "default": "qfq", "description": "复权类型", "required": False, "type": "str"},
+        ]
+    },
+
+    # ------ 股票筛选器 ------
+    "stock_fund_screener_em": {
+        "name": "stock_fund_screener_em",
+        "description": "股票筛选器",
+        "category": "基础信息",
+        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id35",
+        "params": [
+            {"name": "indicator", "default": "收盘价", "description": "筛选指标", "required": False, "type": "str"},
+        ]
+    },
+
+
+    # ========================================
+    # 五、ETF/基金/债券/期货
+    # ========================================
+
+    # ------ ETF数据 ------
     "fund_etf_hist_em": {
         "name": "fund_etf_hist_em",
         "description": "ETF历史数据",
-        "category": "基金数据",
+        "category": "ETF/基金",
+        "doc_url": "https://akshare.akfamily.xyz/data/fund/fund.html#id1",
         "params": [
             {"name": "symbol", "default": "510500", "description": "ETF代码", "required": True, "type": "str"},
             {"name": "period", "default": "daily", "description": "周期", "required": False, "type": "str"},
@@ -634,110 +764,183 @@ AKSHARE_FUNCTIONS = {
     "fund_etf_spot_em": {
         "name": "fund_etf_spot_em",
         "description": "ETF实时行情",
-        "category": "基金数据",
+        "category": "ETF/基金",
+        "doc_url": "https://akshare.akfamily.xyz/data/fund/fund.html#id2",
         "params": []
     },
     "fund_lof_spot_em": {
         "name": "fund_lof_spot_em",
         "description": "LOF实时行情",
-        "category": "基金数据",
+        "category": "ETF/基金",
+        "doc_url": "https://akshare.akfamily.xyz/data/fund/fund.html#id3",
         "params": []
     },
 
-    # ========== 外汇数据 ==========
+    # ------ 可转债 ------
+    "bond_zh_hs_cov": {
+        "name": "bond_zh_hs_cov",
+        "description": "可转债数据",
+        "category": "债券",
+        "doc_url": "https://akshare.akfamily.xyz/data/bond/bond.html#id1",
+        "params": []
+    },
+    "bond_zh_hs_cov_spot": {
+        "name": "bond_zh_hs_cov_spot",
+        "description": "可转债实时行情",
+        "category": "债券",
+        "doc_url": "https://akshare.akfamily.xyz/data/bond/bond.html#id2",
+        "params": []
+    },
+
+    # ------ 期货 ------
+    "futures_zh_daily_sina": {
+        "name": "futures_zh_daily_sina",
+        "description": "期货日线数据",
+        "category": "期货",
+        "doc_url": "https://akshare.akfamily.xyz/data/futures/futures.html#id1",
+        "params": [
+            {"name": "symbol", "default": "RU9999", "description": "期货代码", "required": True, "type": "str"},
+        ]
+    },
+    "futures_zh_spot": {
+        "name": "futures_zh_spot",
+        "description": "期货实时行情",
+        "category": "期货",
+        "doc_url": "https://akshare.akfamily.xyz/data/futures/futures.html#id2",
+        "params": []
+    },
+    "futures_zh_index_spot": {
+        "name": "futures_zh_index_spot",
+        "description": "期货指数行情",
+        "category": "期货",
+        "doc_url": "https://akshare.akfamily.xyz/data/futures/futures.html#id3",
+        "params": []
+    },
+
+    # ------ 期权 ------
+    "opt_em_daily_sina": {
+        "name": "opt_em_daily_sina",
+        "description": "期权日线数据",
+        "category": "期权",
+        "doc_url": "https://akshare.akfamily.xyz/data/options/options.html#id1",
+        "params": [
+            {"name": "symbol", "default": "510050C2306", "description": "期权代码", "required": True, "type": "str"},
+        ]
+    },
+    "opt_em_spot_sina": {
+        "name": "opt_em_spot_sina",
+        "description": "期权实时行情",
+        "category": "期权",
+        "doc_url": "https://akshare.akfamily.xyz/data/options/options.html#id2",
+        "params": []
+    },
+
+
+    # ========================================
+    # 六、宏观数据
+    # ========================================
+
+    # ------ 中国宏观 ------
+    "macro_cn_gdp": {
+        "name": "macro_cn_gdp",
+        "description": "中国GDP",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id1",
+        "params": []
+    },
+    "macro_cn_cpi": {
+        "name": "macro_cn_cpi",
+        "description": "中国CPI",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id2",
+        "params": []
+    },
+    "macro_cn_ppi": {
+        "name": "macro_cn_ppi",
+        "description": "中国PPI",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id3",
+        "params": []
+    },
+    "macro_cn_m2": {
+        "name": "macro_cn_m2",
+        "description": "中国M2",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id4",
+        "params": []
+    },
+    "macro_cn_m1": {
+        "name": "macro_cn_m1",
+        "description": "中国M1",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id5",
+        "params": []
+    },
+    "macro_cn_m0": {
+        "name": "macro_cn_m0",
+        "description": "中国M0",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id6",
+        "params": []
+    },
+    "macro_cn_shibor": {
+        "name": "macro_cn_shibor",
+        "description": "上海银行间拆借利率SHIBOR",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id7",
+        "params": []
+    },
+    "macro_cn_lpr": {
+        "name": "macro_cn_lpr",
+        "description": "贷款市场报价利率LPR",
+        "category": "宏观-中国经济",
+        "doc_url": "https://akshare.akfamily.xyz/data/macro/macro.html#id8",
+        "params": []
+    },
+
+    # ------ 外汇 ------
     "forex_zh_spot": {
         "name": "forex_zh_spot",
         "description": "外汇实时行情",
-        "category": "外汇数据",
+        "category": "宏观-外汇",
+        "doc_url": "https://akshare.akfamily.xyz/data/forex/forex.html#id1",
         "params": []
     },
     "forex_zh_hist": {
         "name": "forex_zh_hist",
         "description": "外汇历史数据",
-        "category": "外汇数据",
+        "category": "宏观-外汇",
+        "doc_url": "https://akshare.akfamily.xyz/data/forex/forex.html#id2",
         "params": [
             {"name": "symbol", "default": "USD/CNY", "description": "货币对", "required": True, "type": "str"},
             {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
             {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
         ]
     },
-
-    # ========== 宏观数据 ==========
-    "macro_cn_gdp": {
-        "name": "macro_cn_gdp",
-        "description": "中国GDP数据",
-        "category": "宏观数据",
-        "params": []
-    },
-    "macro_cn_cpi": {
-        "name": "macro_cn_cpi",
-        "description": "中国CPI数据",
-        "category": "宏观数据",
-        "params": []
-    },
-    "macro_cn_ppi": {
-        "name": "macro_cn_ppi",
-        "description": "中国PPI数据",
-        "category": "宏观数据",
-        "params": []
-    },
-    "macro_cn_m2": {
-        "name": "macro_cn_m2",
-        "description": "中国M2数据",
-        "category": "宏观数据",
-        "params": []
-    },
 }
 
 
 # 分类
 CATEGORIES = {
-    "股票行情": [
-        {"name": "stock_zh_a_hist", "description": "A股历史K线数据"},
-        {"name": "stock_zh_a_spot_em", "description": "A股实时行情"},
-        {"name": "stock_zh_a_hist_sina", "description": "新浪A股历史数据"},
+    # ----- 微观 -----
+    "微观-个股行情": [
+        {"name": "stock_zh_a_hist", "description": "A股历史K线"},
+        {"name": "stock_zh_a_spot_em", "description": "A股实时行情【游资最爱】"},
+        {"name": "stock_zh_a_hist_sina", "description": "新浪A股历史"},
         {"name": "stock_zh_a_minute", "description": "A股分时数据"},
-        {"name": "stock_zh_a_cw_daily", "description": "A股筹码分布日线"},
+        {"name": "stock_zh_a_cw_daily", "description": "A股筹码分布"},
+        {"name": "stock_zh_daily_sina", "description": "A股日K线"},
+        {"name": "stock_zh_tick_tx", "description": "A股逐笔成交(腾讯)"},
+        {"name": "stock_zh_tick_js", "description": "A股逐笔成交(精简)"},
     ],
-    "指数行情": [
-        {"name": "stock_zh_index_daily", "description": "A股指数日K线"},
-        {"name": "stock_zh_index_spot", "description": "A股指数实时行情"},
-        {"name": "stock_zh_index_cons", "description": "指数成分股"},
-    ],
-    "涨跌停": [
-        {"name": "stock_zh_a_limit_up_em", "description": "A股涨停板"},
-        {"name": "stock_zh_a_limit_down_em", "description": "A股跌停板"},
-        {"name": "stock_zh_a_limit_up_sina", "description": "新浪涨停板"},
-    ],
-    "资金流向": [
-        {"name": "stock_individual_fund_flow", "description": "个股资金流向"},
+    "微观-资金流向": [
+        {"name": "stock_individual_fund_flow", "description": "个股资金流向【游资最爱】"},
         {"name": "stock_individual_fund_flow_stick", "description": "个股资金流向(多日)"},
-        {"name": "stock_sector_fund_flow_rank", "description": "板块资金流向排名"},
-        {"name": "stock_fund_flow", "description": "大盘资金流向"},
-        {"name": "stock_market_fund_flow", "description": "市场资金流向"},
-        {"name": "stock_fund_flow_ggyl", "description": "资金流向-归公流向"},
     ],
-    "龙虎榜": [
-        {"name": "stock_lhb_detail_em", "description": "龙虎榜详情"},
-        {"name": "stock_lh_yyb_most", "description": "龙虎榜营业部排行-上榜次数"},
-        {"name": "stock_lh_yyb_capital", "description": "龙虎榜营业部排行-资金实力"},
-        {"name": "stock_lhb_hyyyb_em", "description": "每日活跃营业部"},
-        {"name": "stock_sina_lhb_jgzz", "description": "机构席位追踪"},
-        {"name": "stock_zt_pool_em", "description": "涨停板池"},
+    "微观-龙虎榜": [
+        {"name": "stock_lhb_detail_em", "description": "龙虎榜详情【游资必看】"},
     ],
-    "板块数据": [
-        {"name": "stock_board_industry_name_em", "description": "行业板块行情"},
-        {"name": "stock_board_concept_name_em", "description": "概念板块行情"},
-        {"name": "stock_board_industry_cons_em", "description": "行业板块成分股"},
-        {"name": "stock_board_concept_cons_em", "description": "概念板块成分股"},
-    ],
-    "股票信息": [
-        {"name": "stock_info_a_code_name", "description": "A股代码名称列表"},
-        {"name": "stock_szse_sse_info", "description": "深交所/上交所信息"},
-        {"name": "stock_info_global_sci_em", "description": "全球市场重要指数"},
-        {"name": "stock_info_hk_sell_em", "description": "港股卖空数据"},
-    ],
-    "财务数据": [
+    "微观-财务数据": [
         {"name": "stock_financial_abstract", "description": "财务摘要"},
         {"name": "stock_financial_analysis_indicator", "description": "财务分析指标"},
         {"name": "stock_yjbb_em", "description": "业绩报表"},
@@ -745,67 +948,118 @@ CATEGORIES = {
         {"name": "stock_fh_em", "description": "分红送转"},
         {"name": "stock_gpwy_em", "description": "股本演变"},
     ],
-    "沪深港通": [
-        {"name": "stock_hsgt_top10_em", "description": "沪深港通top10"},
-        {"name": "stock_hsgt_hist_em", "description": "沪深港通历史数据"},
-        {"name": "stock_hsgt_sse_sgt_em", "description": "沪深港通持股标的"},
+    "微观-融资融券": [
+        {"name": "stock_rzrq_em", "description": "融资融券"},
+        {"name": "stock_rzrq_detail_em", "description": "融资融券明细"},
     ],
-    "新股数据": [
-        {"name": "stock_ipo_info_em", "description": "新股上市信息"},
-        {"name": "stock_ipo_bis_em", "description": "新股申购"},
+    "微观-限售股": [
+        {"name": "stock_xsg_fp_em", "description": "限售股解禁"},
+        {"name": "stock_xsg_hold_em", "description": "限售股持股"},
     ],
-    "复权数据": [
-        {"name": "stock_daily_adj_em", "description": "日线复权数据"},
+    "微观-大宗交易": [
+        {"name": "stock_dzjy_em", "description": "大宗交易"},
     ],
-    "大盘数据": [
+    "微观-股东数据": [
+        {"name": "stock_zh_gbqy_em", "description": "股东人数变化"},
+    ],
+    "微观-资讯": [
+        {"name": "stock_news_em", "description": "个股新闻"},
+        {"name": "stock_notice_em", "description": "个股公告"},
+        {"name": "stock_jgzy_em", "description": "机构调研"},
+    ],
+
+    # ----- 中观 -----
+    "中观-涨跌停": [
+        {"name": "stock_zh_a_limit_up_em", "description": "涨停板【游资最爱】"},
+        {"name": "stock_zh_a_limit_down_em", "description": "跌停板"},
+        {"name": "stock_zh_a_limit_up_sina", "description": "新浪涨停板"},
+        {"name": "stock_zt_pool_em", "description": "涨停板池【游资常用】"},
+        {"name": "stock_zt_pool_strong_em", "description": "强势涨停池"},
+    ],
+    "中观-板块行情": [
+        {"name": "stock_board_industry_name_em", "description": "行业板块行情"},
+        {"name": "stock_board_concept_name_em", "description": "概念板块行情"},
+        {"name": "stock_board_industry_cons_em", "description": "行业板块成分股"},
+        {"name": "stock_board_concept_cons_em", "description": "概念板块成分股"},
+    ],
+    "中观-资金流向": [
+        {"name": "stock_sector_fund_flow_rank", "description": "板块资金流向排名【游资最爱】"},
+        {"name": "stock_fund_flow", "description": "大盘资金流向"},
+        {"name": "stock_market_fund_flow", "description": "市场资金流向"},
+        {"name": "stock_fund_flow_ggyl", "description": "资金流向-归公流向"},
+    ],
+    "中观-龙虎榜": [
+        {"name": "stock_lh_yyb_most", "description": "龙虎榜营业部-上榜次数【游资必看】"},
+        {"name": "stock_lh_yyb_capital", "description": "龙虎榜营业部-资金实力"},
+        {"name": "stock_lhb_hyyyb_em", "description": "每日活跃营业部"},
+        {"name": "stock_sina_lhb_jgzz", "description": "机构席位追踪"},
+    ],
+
+    # ----- 宏观 -----
+    "宏观-指数行情": [
+        {"name": "stock_zh_index_daily", "description": "指数日K线"},
+        {"name": "stock_zh_index_spot", "description": "指数实时行情"},
+        {"name": "stock_zh_index_cons", "description": "指数成分股"},
+    ],
+    "宏观-大盘行情": [
         {"name": "stock_zh_a_treda", "description": "A股市场总貌"},
         {"name": "stock_zh_a_tredb", "description": "A股市场交易详情"},
         {"name": "stock_zh_a_trade", "description": "A股市场资金流向"},
     ],
-    "融资融券": [
-        {"name": "stock_rzrq_em", "description": "融资融券"},
-        {"name": "stock_rzrq_detail_em", "description": "融资融券明细"},
+    "宏观-沪深港通": [
+        {"name": "stock_hsgt_top10_em", "description": "沪深港通top10"},
+        {"name": "stock_hsgt_hist_em", "description": "沪深港通历史数据"},
+        {"name": "stock_hsgt_sse_sgt_em", "description": "沪深港通持股标的"},
+        {"name": "stock_hsgt_em", "description": "沪深港通持股"},
+    ],
+    "宏观-融资融券": [
         {"name": "stock_rzrq_fund_flow", "description": "融资融券资金流向"},
+        {"name": "stock_rzrq_latest", "description": "融资融券最新"},
     ],
-    "限售股": [
-        {"name": "stock_xsg_fp_em", "description": "限售股解禁"},
-        {"name": "stock_xsg_hold_em", "description": "限售股持股"},
+    "宏观-中国经济": [
+        {"name": "macro_cn_gdp", "description": "中国GDP"},
+        {"name": "macro_cn_cpi", "description": "中国CPI"},
+        {"name": "macro_cn_ppi", "description": "中国PPI"},
+        {"name": "macro_cn_m2", "description": "中国M2"},
+        {"name": "macro_cn_m1", "description": "中国M1"},
+        {"name": "macro_cn_m0", "description": "中国M0"},
+        {"name": "macro_cn_shibor", "description": "SHIBOR"},
+        {"name": "macro_cn_lpr", "description": "LPR"},
     ],
-    "大宗交易": [
-        {"name": "stock_dzjy_em", "description": "大宗交易"},
+    "宏观-外汇": [
+        {"name": "forex_zh_spot", "description": "外汇实时行情"},
+        {"name": "forex_zh_hist", "description": "外汇历史数据"},
     ],
-    "股东数据": [
-        {"name": "stock_zh_gbqy_em", "description": "股东人数变化"},
+
+    # ----- 基础信息 -----
+    "基础信息": [
+        {"name": "stock_info_a_code_name", "description": "A股代码名称列表"},
+        {"name": "stock_info_global_sci_em", "description": "全球市场重要指数"},
+        {"name": "stock_szse_sse_info", "description": "深交所/上交所信息"},
+        {"name": "stock_ipo_info_em", "description": "新股上市信息"},
+        {"name": "stock_ipo_bis_em", "description": "新股申购"},
+        {"name": "stock_daily_adj_em", "description": "日线复权数据"},
+        {"name": "stock_fund_screener_em", "description": "股票筛选器"},
     ],
-    "机构调研": [
-        {"name": "stock_jgzy_em", "description": "机构调研"},
-    ],
-    "期货数据": [
-        {"name": "futures_zh_daily_sina", "description": "期货日线数据"},
-        {"name": "futures_zh_spot", "description": "期货实时行情"},
-    ],
-    "期权数据": [
-        {"name": "opt_em_daily_sina", "description": "期权日线数据"},
-        {"name": "opt_em_spot_sina", "description": "期权实时行情"},
-    ],
-    "可转债": [
-        {"name": "bond_zh_hs_cov", "description": "可转债数据"},
-        {"name": "bond_zh_hs_cov_spot", "description": "可转债实时行情"},
-    ],
-    "基金数据": [
+
+    # ----- ETF/基金/债券 -----
+    "ETF/基金": [
         {"name": "fund_etf_hist_em", "description": "ETF历史数据"},
         {"name": "fund_etf_spot_em", "description": "ETF实时行情"},
         {"name": "fund_lof_spot_em", "description": "LOF实时行情"},
     ],
-    "外汇数据": [
-        {"name": "forex_zh_spot", "description": "外汇实时行情"},
-        {"name": "forex_zh_hist", "description": "外汇历史数据"},
+    "债券": [
+        {"name": "bond_zh_hs_cov", "description": "可转债数据"},
+        {"name": "bond_zh_hs_cov_spot", "description": "可转债实时行情"},
     ],
-    "宏观数据": [
-        {"name": "macro_cn_gdp", "description": "中国GDP数据"},
-        {"name": "macro_cn_cpi", "description": "中国CPI数据"},
-        {"name": "macro_cn_ppi", "description": "中国PPI数据"},
-        {"name": "macro_cn_m2", "description": "中国M2数据"},
+    "期货": [
+        {"name": "futures_zh_daily_sina", "description": "期货日线数据"},
+        {"name": "futures_zh_spot", "description": "期货实时行情"},
+        {"name": "futures_zh_index_spot", "description": "期货指数行情"},
+    ],
+    "期权": [
+        {"name": "opt_em_daily_sina", "description": "期权日线数据"},
+        {"name": "opt_em_spot_sina", "description": "期权实时行情"},
     ],
 }
 
@@ -821,6 +1075,25 @@ def get_akshare_categories():
 def get_akshare_functions():
     """获取akshare函数列表"""
     return list(AKSHARE_FUNCTIONS.values())
+
+
+@router.get("/akshare/search")
+def search_akshare_functions(q: str = ""):
+    """搜索akshare函数(支持函数名/描述模糊匹配)"""
+    if not q:
+        return []
+
+    q_lower = q.lower()
+    results = []
+
+    for func_name, func_info in AKSHARE_FUNCTIONS.items():
+        # 匹配函数名或描述
+        if (q_lower in func_name.lower() or
+            q_lower in func_info.get("description", "").lower() or
+            q_lower in func_info.get("category", "").lower()):
+            results.append(func_info)
+
+    return results
 
 
 @router.get("/akshare/function/{func_name}")
@@ -863,3 +1136,7 @@ def execute_akshare_function(func_name: str, params: dict = {}):
             return {"data": str(result), "columns": []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"执行失败: {str(e)}")
+
+
+# 修复导入
+from sqlmodel import Session

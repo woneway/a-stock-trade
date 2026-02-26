@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './DataQuery.css';
 
@@ -6,6 +6,8 @@ interface AkshareFunction {
   name: string;
   description: string;
   category: string;
+  doc_url?: string;
+  remark?: string;
   params: Array<{
     name: string;
     default?: string;
@@ -40,6 +42,11 @@ export default function DataQuery() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
+
+  // 搜索相关
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<AkshareFunction[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // 同步相关状态
   const [syncLoading, setSyncLoading] = useState(false);
@@ -85,6 +92,43 @@ export default function DataQuery() {
     }
   };
 
+  // 搜索函数
+  useEffect(() => {
+    const searchFunctions = async () => {
+      if (searchQuery.trim().length < 1) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get(`/api/data/akshare/search?q=${encodeURIComponent(searchQuery)}`);
+        setSearchResults(res.data);
+        setShowSearchResults(true);
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    };
+
+    const debounce = setTimeout(searchFunctions, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  const handleSearchSelect = (func: AkshareFunction) => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+
+    // 查找并选中分类
+    const category = Object.keys(categories).find(cat =>
+      categories[cat]?.some(f => f.name === func.name)
+    );
+    if (category) {
+      setSelectedCategory(category);
+      setSelectedFunction(func.name);
+    }
+  };
+
   useEffect(() => {
     if (selectedCategory && categories[selectedCategory]?.length > 0) {
       const firstFunc = categories[selectedCategory][0].name;
@@ -105,9 +149,9 @@ export default function DataQuery() {
     setQueryResult(null);
 
     try {
-      const res = await axios.post('/api/akshare/query', {
-        function: selectedFunction,
-        params: Object.entries(params).reduce((acc, [key, value]) => {
+      // 使用正确的新API路径
+      const res = await axios.post(`/api/data/akshare/execute?func_name=${selectedFunction}`, {
+        ...Object.entries(params).reduce((acc, [key, value]) => {
           if (value) acc[key] = value;
           return acc;
         }, {} as Record<string, string>),
@@ -122,7 +166,7 @@ export default function DataQuery() {
 
   const fetchSyncStatus = async () => {
     try {
-      const res = await axios.get('/api/sync/v2/status');
+      const res = await axios.get('/api/data/stats');
       setSyncStatus(res.data);
     } catch (err) {
       console.error('Failed to fetch sync status:', err);
@@ -133,22 +177,12 @@ export default function DataQuery() {
     setSyncLoading(true);
     setSyncMessage('');
     try {
-      const res = await axios.post('/api/sync/v2/basics');
-      setSyncMessage(`股票基本信息同步完成: 共 ${res.data.total} 只股票，新增 ${res.data.added} 只`);
-      fetchSyncStatus();
-    } catch (err: any) {
-      setSyncMessage(`同步失败: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handleSyncQuotes = async () => {
-    setSyncLoading(true);
-    setSyncMessage('');
-    try {
-      const res = await axios.post('/api/sync/v2/quotes');
-      setSyncMessage(`实时行情同步完成: 共更新 ${res.data.quotes_updated} 只股票`);
+      const res = await axios.post('/api/data/sync', {
+        stock_code: '000001',
+        start_date: '20250101',
+        end_date: '20250227',
+      });
+      setSyncMessage(`同步完成: ${JSON.stringify(res.data)}`);
       fetchSyncStatus();
     } catch (err: any) {
       setSyncMessage(`同步失败: ${err.response?.data?.detail || err.message}`);
@@ -166,12 +200,12 @@ export default function DataQuery() {
     setSyncLoading(true);
     setSyncMessage('');
     try {
-      const res = await axios.post('/api/sync/v2/klines', {
-        start_date: syncForm.startDate,
-        end_date: syncForm.endDate,
-        codes: syncForm.stockCodes || undefined,
+      const res = await axios.post('/api/data/sync', {
+        stock_code: syncForm.stockCodes || '600519',
+        start_date: syncForm.startDate.replace(/-/g, ''),
+        end_date: syncForm.endDate.replace(/-/g, ''),
       });
-      setSyncMessage(`K线数据同步完成: 共获取 ${res.data.klines_updated} 条数据`);
+      setSyncMessage(`K线数据同步完成`);
       fetchSyncStatus();
     } catch (err: any) {
       setSyncMessage(`同步失败: ${err.response?.data?.detail || err.message}`);
@@ -188,10 +222,64 @@ export default function DataQuery() {
     return String(value);
   };
 
+  // 按层级分组分类
+  const categoryGroups = useMemo(() => {
+    const groups: Record<string, string[]> = {
+      '微观-个股': [],
+      '中观-板块': [],
+      '宏观-市场': [],
+      '其他': [],
+    };
+
+    Object.keys(categories).forEach(cat => {
+      if (cat.startsWith('微观')) {
+        groups['微观-个股'].push(cat);
+      } else if (cat.startsWith('中观')) {
+        groups['中观-板块'].push(cat);
+      } else if (cat.startsWith('宏观')) {
+        groups['宏观-市场'].push(cat);
+      } else {
+        groups['其他'].push(cat);
+      }
+    });
+
+    return groups;
+  }, [categories]);
+
   return (
     <div className="data-query-page">
       <div className="page-header">
-        <h1>数据查询与同步</h1>
+        <h1>数据查询</h1>
+        <p className="subtitle">AkShare 全面接入 - 宏观/中观/微观</p>
+      </div>
+
+      {/* 搜索框 */}
+      <div className="search-box">
+        <input
+          type="text"
+          placeholder="搜索接口名称或描述... (如: 涨停、资金、龙虎榜)"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onFocus={() => searchQuery && setShowSearchResults(true)}
+        />
+        <span className="search-icon">🔍</span>
+
+        {/* 搜索结果下拉 */}
+        {showSearchResults && searchResults.length > 0 && (
+          <div className="search-results">
+            {searchResults.map(func => (
+              <div
+                key={func.name}
+                className="search-result-item"
+                onClick={() => handleSearchSelect(func)}
+              >
+                <span className="result-name">{func.name}</span>
+                <span className="result-desc">{func.description}</span>
+                <span className="result-cat">{func.category}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="tabs">
@@ -213,21 +301,73 @@ export default function DataQuery() {
 
       {activeTab === 'query' && (
         <div className="query-panel">
+          {/* 左侧分类导航 */}
           <div className="query-sidebar">
-            <h3>数据分类</h3>
-            <div className="category-list">
-              {Object.keys(categories).map(cat => (
+            {/* 微观-个股 */}
+            <div className="category-group">
+              <div className="group-title">📊 微观-个股</div>
+              {categoryGroups['微观-个股'].map(cat => (
+                <div key={cat} className="category-section">
+                  <button
+                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat.replace('微观-', '')}
+                    <span className="count">{categories[cat]?.length || 0}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 中观-板块 */}
+            <div className="category-group">
+              <div className="group-title">📈 中观-板块</div>
+              {categoryGroups['中观-板块'].map(cat => (
+                <div key={cat} className="category-section">
+                  <button
+                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat.replace('中观-', '')}
+                    <span className="count">{categories[cat]?.length || 0}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 宏观-市场 */}
+            <div className="category-group">
+              <div className="group-title">🌐 宏观-市场</div>
+              {categoryGroups['宏观-市场'].map(cat => (
+                <div key={cat} className="category-section">
+                  <button
+                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat.replace('宏观-', '')}
+                    <span className="count">{categories[cat]?.length || 0}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 其他 */}
+            {categoryGroups['其他'].map(cat => (
+              <div key={cat} className="category-section">
                 <button
-                  key={cat}
                   className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
                   onClick={() => setSelectedCategory(cat)}
                 >
                   {cat}
+                  <span className="count">{categories[cat]?.length || 0}</span>
                 </button>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
-            <h3>数据接口</h3>
+          {/* 中间接口列表 */}
+          <div className="query-functions">
+            <h3>{selectedCategory}</h3>
             <div className="function-list">
               {categories[selectedCategory]?.map(func => (
                 <button
@@ -235,22 +375,39 @@ export default function DataQuery() {
                   className={`function-item ${selectedFunction === func.name ? 'active' : ''}`}
                   onClick={() => setSelectedFunction(func.name)}
                 >
-                  {func.description}
+                  <span className="func-name">{func.name}</span>
+                  <span className="func-desc">{func.description}</span>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* 右侧详情 */}
           <div className="query-main">
             {functionDetail && (
               <div className="function-detail">
                 <div className="detail-header">
-                  <h3>{functionDetail.name}</h3>
+                  <div className="detail-title">
+                    <h3>{functionDetail.name}</h3>
+                    <a
+                      href={functionDetail.doc_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="doc-link"
+                      title="查看官方文档"
+                    >
+                      📖 文档
+                    </a>
+                  </div>
                   <span className="category-tag">{functionDetail.category}</span>
                 </div>
 
                 {functionDetail.description && (
                   <p className="function-desc">{functionDetail.description}</p>
+                )}
+
+                {functionDetail.remark && (
+                  <p className="function-remark">💡 {functionDetail.remark}</p>
                 )}
 
                 {functionDetail.params && functionDetail.params.length > 0 && (
@@ -265,26 +422,26 @@ export default function DataQuery() {
                           </label>
                           <input
                             type="text"
-                            placeholder={param.description || param.default || ''}
+                            placeholder={param.default || param.description || ''}
                             value={params[param.name] || ''}
                             onChange={e => setParams({ ...params, [param.name]: e.target.value })}
                           />
-                          {param.description && (
-                            <span className="param-hint">{param.description}</span>
-                          )}
+                          <span className="param-hint">{param.description}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <button
-                  className="btn btn-primary btn-large"
-                  onClick={handleQuery}
-                  disabled={queryLoading}
-                >
-                  {queryLoading ? '查询中...' : '查询数据'}
-                </button>
+                <div className="action-buttons">
+                  <button
+                    className="btn btn-primary btn-large"
+                    onClick={handleQuery}
+                    disabled={queryLoading}
+                  >
+                    {queryLoading ? '查询中...' : '▶ 执行查询'}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -300,8 +457,8 @@ export default function DataQuery() {
                 <div className="result-header">
                   <h4>
                     查询结果
-                    {queryResult.total !== undefined && (
-                      <span className="result-count">共 {queryResult.total} 条</span>
+                    {queryResult.data && (
+                      <span className="result-count">共 {queryResult.data.length} 条</span>
                     )}
                   </h4>
                 </div>
@@ -333,7 +490,7 @@ export default function DataQuery() {
                   </div>
                 )}
 
-                {queryResult.total && queryResult.total > 100 && (
+                {queryResult.data && queryResult.data.length > 100 && (
                   <p className="result-hint">仅显示前 100 条数据</p>
                 )}
               </div>
@@ -363,30 +520,6 @@ export default function DataQuery() {
           </div>
 
           <div className="sync-sections">
-            <div className="sync-section">
-              <h3>同步股票基本信息</h3>
-              <p>从 baostock 获取股票代码、名称、市场等基本信息</p>
-              <button
-                className="btn btn-primary"
-                onClick={handleSyncBasics}
-                disabled={syncLoading}
-              >
-                {syncLoading ? '同步中...' : '开始同步'}
-              </button>
-            </div>
-
-            <div className="sync-section">
-              <h3>同步实时行情</h3>
-              <p>获取股票的最新价格、涨跌幅、成交量等数据</p>
-              <button
-                className="btn btn-primary"
-                onClick={handleSyncQuotes}
-                disabled={syncLoading}
-              >
-                {syncLoading ? '同步中...' : '开始同步'}
-              </button>
-            </div>
-
             <div className="sync-section highlight">
               <h3>同步K线数据（用于回测）</h3>
               <p>获取历史K线数据，用于回测策略</p>
