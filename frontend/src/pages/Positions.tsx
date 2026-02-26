@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import type { Position } from '../types';
+import dayjs from 'dayjs';
 
 export default function Positions() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newPosition, setNewPosition] = useState({
+    stock_code: '',
+    stock_name: '',
+    quantity: '',
+    cost_price: '',
+    current_price: '',
+  });
 
   useEffect(() => {
     loadPositions();
@@ -27,10 +36,34 @@ export default function Positions() {
     if (!confirm('确定要平仓吗？')) return;
     try {
       await axios.post(`/api/positions/${id}/close`);
-      alert('平仓成功');
+      alert('平仓成功，平仓记录已自动生成');
       loadPositions();
     } catch (err) {
       alert('平仓失败');
+    }
+  };
+
+  const handleAddPosition = async () => {
+    if (!newPosition.stock_code || !newPosition.quantity || !newPosition.cost_price) {
+      alert('请填写股票代码、数量和成本价');
+      return;
+    }
+    try {
+      await axios.post('/api/positions', {
+        stock_code: newPosition.stock_code,
+        stock_name: newPosition.stock_name || newPosition.stock_code,
+        quantity: parseInt(newPosition.quantity),
+        cost_price: parseFloat(newPosition.cost_price),
+        current_price: parseFloat(newPosition.current_price) || parseFloat(newPosition.cost_price),
+        status: 'holding',
+        opened_at: dayjs().format('YYYY-MM-DD'),
+      });
+      alert('建仓成功，买入记录已自动生成');
+      setShowAddModal(false);
+      setNewPosition({ stock_code: '', stock_name: '', quantity: '', cost_price: '', current_price: '' });
+      loadPositions();
+    } catch (err) {
+      alert('建仓失败');
     }
   };
 
@@ -47,7 +80,73 @@ export default function Positions() {
           <h1>持仓列表</h1>
           <span className="date">当前持仓: {positions.length} 只</span>
         </div>
+        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+          + 新建持仓
+        </button>
       </div>
+
+      {/* 新建持仓弹窗 */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>新建持仓</h3>
+              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>股票代码 *</label>
+                <input
+                  type="text"
+                  value={newPosition.stock_code}
+                  onChange={e => setNewPosition({ ...newPosition, stock_code: e.target.value })}
+                  placeholder="如: 300750"
+                />
+              </div>
+              <div className="form-group">
+                <label>股票名称</label>
+                <input
+                  type="text"
+                  value={newPosition.stock_name}
+                  onChange={e => setNewPosition({ ...newPosition, stock_name: e.target.value })}
+                  placeholder="如: 宁德时代"
+                />
+              </div>
+              <div className="form-group">
+                <label>数量 *</label>
+                <input
+                  type="number"
+                  value={newPosition.quantity}
+                  onChange={e => setNewPosition({ ...newPosition, quantity: e.target.value })}
+                  placeholder="如: 1000"
+                />
+              </div>
+              <div className="form-group">
+                <label>成本价 *</label>
+                <input
+                  type="number"
+                  value={newPosition.cost_price}
+                  onChange={e => setNewPosition({ ...newPosition, cost_price: e.target.value })}
+                  placeholder="如: 180.5"
+                />
+              </div>
+              <div className="form-group">
+                <label>现价（可选）</label>
+                <input
+                  type="number"
+                  value={newPosition.current_price}
+                  onChange={e => setNewPosition({ ...newPosition, current_price: e.target.value })}
+                  placeholder="默认等于成本价"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowAddModal(false)}>取消</button>
+              <button className="btn btn-primary" onClick={handleAddPosition}>确认建仓</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 汇总卡片 */}
       <div className="summary-cards">

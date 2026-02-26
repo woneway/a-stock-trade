@@ -37,5 +37,9 @@ class TradeResponse(TradeBase):
 
 class TradeSummary(BaseModel):
     total_trades: int
-    total_fee: float
-    total_pnl: float
+    buy_count: int
+    sell_count: int
+    total_buy_amount: float
+    total_sell_amount: float
+    total_fees: float
+    net_profit: float

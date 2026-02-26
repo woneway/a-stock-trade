@@ -43,7 +43,7 @@ export default function Trades() {
       if (filters.startDate) params.start_date = filters.startDate;
       if (filters.endDate) params.end_date = filters.endDate;
 
-      const res = await axios.get('/trades/statistics/summary', { params });
+      const res = await axios.get('/api/trades/summary', { params });
       setStatistics(res.data);
     } catch (err) {
       console.error('Failed to load statistics:', err);

@@ -36,7 +36,7 @@ export const tradeApi = {
   update: (id: number, data: any) => api.put(`/trades/${id}`, data),
   delete: (id: number) => api.delete(`/trades/${id}`),
   getSummary: (params?: { start_date?: string; end_date?: string }) =>
-    api.get('/trades/statistics/summary', { params }),
+    api.get('/trades/summary', { params }),
 };
 
 export const tradesApi = tradeApi;

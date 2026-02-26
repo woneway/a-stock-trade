@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import json
 
 from app.database import engine
-from app.models.plan import PrePlan, PostReview
+from app.models.plan import PrePlan, PostReview, HistoricalPlan
 from app.models.strategy import Strategy
 from app.models.trade import Trade
 from app.schemas.plan import (
@@ -18,6 +18,9 @@ from app.schemas.plan import (
     PostReviewAnalysis,
     CandidateStock,
     IntelligentAnalysis,
+    HistoricalPlanCreate,
+    HistoricalPlanUpdate,
+    HistoricalPlanResponse,
 )
 
 
@@ -421,3 +424,114 @@ def get_intelligent_analysis(db: Session = Depends(get_db), days: int = 30):
         strategy_stats=strategy_stats,
         recommendations=recommendations,
     )
+
+
+# ========== 历史计划 API ==========
+
+@router.get("/history", response_model=List[HistoricalPlanResponse])
+def get_historical_plans(
+    db: Session = Depends(get_db),
+    start_date: date = None,
+    end_date: date = None,
+    limit: int = 30
+):
+    """获取历史计划列表"""
+    statement = select(HistoricalPlan)
+    if start_date:
+        statement = statement.where(HistoricalPlan.trade_date >= start_date)
+    if end_date:
+        statement = statement.where(HistoricalPlan.trade_date <= end_date)
+    statement = statement.order_by(HistoricalPlan.trade_date.desc()).limit(limit)
+    results = db.exec(statement).all()
+    return results
+
+
+@router.get("/history/{history_id}", response_model=HistoricalPlanResponse)
+def get_historical_plan(history_id: int, db: Session = Depends(get_db)):
+    """获取历史计划详情"""
+    db_item = db.get(HistoricalPlan, history_id)
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Historical plan not found")
+    return db_item
+
+
+@router.post("/history", response_model=HistoricalPlanResponse)
+def create_historical_plan(item: HistoricalPlanCreate, db: Session = Depends(get_db)):
+    """创建历史计划"""
+    existing = db.exec(
+        select(HistoricalPlan).where(HistoricalPlan.trade_date == item.trade_date)
+    ).first()
+
+    if existing:
+        for key, value in item.model_dump().items():
+            if value is not None:
+                setattr(existing, key, value)
+        existing.updated_at = date.today()
+        db.add(existing)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    db_item = HistoricalPlan.model_validate(item)
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@router.put("/history/{history_id}/sync", response_model=HistoricalPlanResponse)
+def sync_historical_plan(history_id: int, db: Session = Depends(get_db)):
+    """同步历史计划数据（从PrePlan/Trades计算汇总）"""
+    db_item = db.get(HistoricalPlan, history_id)
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Historical plan not found")
+
+    # 从PrePlan获取计划数据
+    if db_item.pre_plan_id:
+        pre_plan = db.get(PrePlan, db_item.pre_plan_id)
+        if pre_plan and pre_plan.candidate_stocks:
+            try:
+                stocks_data = json.loads(pre_plan.candidate_stocks)
+                db_item.planned_stock_count = len([s for s in stocks_data if s.get("code")])
+            except:
+                db_item.planned_stock_count = 0
+
+    # 从Trade获取执行数据
+    trades = db.exec(
+        select(Trade).where(Trade.trade_date == db_item.trade_date)
+    ).all()
+    db_item.executed_stock_count = len(set(t.code for t in trades if t.action == "buy"))
+
+    # 计算执行率
+    if db_item.planned_stock_count and db_item.planned_stock_count > 0:
+        db_item.execution_rate = round(
+            db_item.executed_stock_count / db_item.planned_stock_count * 100, 1
+        )
+
+    # 计算总盈亏
+    total_pnl = sum(t.pnl if t.pnl else 0 for t in trades)
+    db_item.total_pnl = round(total_pnl, 2)
+
+    db_item.updated_at = date.today()
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+
+@router.put("/history/{history_id}", response_model=HistoricalPlanResponse)
+def update_historical_plan(history_id: int, item: HistoricalPlanUpdate, db: Session = Depends(get_db)):
+    """更新历史计划"""
+    db_item = db.get(HistoricalPlan, history_id)
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Historical plan not found")
+
+    item_data = item.model_dump(exclude_unset=True)
+    for key, value in item_data.items():
+        setattr(db_item, key, value)
+
+    db_item.updated_at = date.today()
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item

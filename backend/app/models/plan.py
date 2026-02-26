@@ -63,3 +63,30 @@ class PostReview(SQLModel, table=True):
 
     class Config:
         populate_by_name = True
+
+
+class HistoricalPlan(SQLModel, table=True):
+    __tablename__ = "historical_plans"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    trade_date: date = Field(index=True, alias="tradeDate")
+
+    pre_plan_id: Optional[int] = Field(default=None, foreign_key="pre_plans.id", alias="prePlanId")
+    post_review_id: Optional[int] = Field(default=None, foreign_key="post_reviews.id", alias="postReviewId")
+
+    status: str = Field(default="completed", alias="status")
+    market_cycle: Optional[str] = Field(default=None, alias="marketCycle")
+    position_plan: Optional[str] = Field(default=None, alias="positionPlan")
+
+    planned_stock_count: Optional[int] = Field(default=0, alias="plannedStockCount")
+    executed_stock_count: Optional[int] = Field(default=0, alias="executedStockCount")
+    execution_rate: Optional[float] = Field(default=0.0, alias="executionRate")
+
+    total_pnl: Optional[float] = Field(default=0.0, alias="totalPnl")
+
+    created_at: date = Field(default_factory=date.today, alias="createdAt")
+    updated_at: date = Field(default_factory=date.today, alias="updatedAt")
+
+    class Config:
+        populate_by_name = True
