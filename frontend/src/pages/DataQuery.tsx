@@ -58,7 +58,7 @@ export default function DataQuery() {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get('/api/akshare/categories');
+      const res = await axios.get('/api/data/akshare/categories');
       setCategories(res.data);
       // 默认选择第一个分类
       const firstCat = Object.keys(res.data)[0];
@@ -75,7 +75,7 @@ export default function DataQuery() {
 
   const fetchFunctionDetail = async (funcName: string) => {
     try {
-      const res = await axios.get(`/api/akshare/function/${funcName}`);
+      const res = await axios.get(`/api/data/akshare/function/${funcName}`);
       setFunctionDetail(res.data);
       setParams({});
       setQueryResult(null);

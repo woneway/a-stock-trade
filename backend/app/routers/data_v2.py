@@ -129,5 +129,188 @@ def get_data_stats():
     }
 
 
+# ========== Akshare 函数查询 ==========
+AKSHARE_FUNCTIONS = {
+    "stock_zh_a_hist": {
+        "name": "stock_zh_a_hist",
+        "description": "A股历史K线数据",
+        "category": "股票行情",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+            {"name": "period", "default": "daily", "description": "周期", "required": False, "type": "str"},
+            {"name": "start_date", "default": "20250101", "description": "开始日期", "required": True, "type": "str"},
+            {"name": "end_date", "default": "20250227", "description": "结束日期", "required": True, "type": "str"},
+            {"name": "adjust", "default": "qfq", "description": "复权类型", "required": False, "type": "str"},
+        ]
+    },
+    "stock_zh_index_daily": {
+        "name": "stock_zh_index_daily",
+        "description": "A股指数日K线",
+        "category": "指数行情",
+        "params": [
+            {"name": "symbol", "default": "sh000001", "description": "指数代码", "required": True, "type": "str"},
+        ]
+    },
+    "stock_zh_a_spot_em": {
+        "name": "stock_zh_a_spot_em",
+        "description": "A股实时行情",
+        "category": "股票行情",
+        "params": []
+    },
+    "stock_zh_a_hist_sina": {
+        "name": "stock_zh_a_hist_sina",
+        "description": "新浪A股历史数据",
+        "category": "股票行情",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
+    "stock_info_a_code_name": {
+        "name": "stock_info_a_code_name",
+        "description": "A股代码名称列表",
+        "category": "股票信息",
+        "params": []
+    },
+    "stock_financial_abstract": {
+        "name": "stock_financial_abstract",
+        "description": "财务摘要",
+        "category": "财务数据",
+        "params": [
+            {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
+    "stock_financial_analysis_indicator": {
+        "name": "stock_financial_analysis_indicator",
+        "description": "财务分析指标",
+        "category": "财务数据",
+        "params": [
+            {"name": "stock", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+            {"name": "indicator", "default": "按报告期", "description": "指标类型", "required": False, "type": "str"},
+        ]
+    },
+    "stock_yjbb_em": {
+        "name": "stock_yjbb_em",
+        "description": "业绩报表",
+        "category": "财务数据",
+        "params": [
+            {"name": "symbol", "default": "600519", "description": "股票代码", "required": True, "type": "str"},
+        ]
+    },
+    "stock_szse_sse_info": {
+        "name": "stock_szse_sse_info",
+        "description": "深交所/上交所信息",
+        "category": "股票信息",
+        "params": []
+    },
+    "stock_zt_pool_em": {
+        "name": "stock_zt_pool_em",
+        "description": "涨停板池",
+        "category": "龙虎榜",
+        "params": [
+            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+        ]
+    },
+    "stock_lhb_em": {
+        "name": "stock_lhb_em",
+        "description": "龙虎榜数据",
+        "category": "龙虎榜",
+        "params": [
+            {"name": "start_date", "default": "", "description": "开始日期", "required": False, "type": "str"},
+            {"name": "end_date", "default": "", "description": "结束日期", "required": False, "type": "str"},
+        ]
+    },
+    "stock_hsgt_top10_em": {
+        "name": "stock_hsgt_top10_em",
+        "description": "沪深港通top10",
+        "category": "沪深港通",
+        "params": [
+            {"name": "symbol", "default": "北向", "description": "类型", "required": True, "type": "str"},
+            {"name": "date", "default": "", "description": "日期", "required": False, "type": "str"},
+        ]
+    },
+}
+
+CATEGORIES = {
+    "股票行情": [
+        {"name": "stock_zh_a_hist", "description": "A股历史K线数据"},
+        {"name": "stock_zh_a_spot_em", "description": "A股实时行情"},
+        {"name": "stock_zh_a_hist_sina", "description": "新浪A股历史数据"},
+    ],
+    "指数行情": [
+        {"name": "stock_zh_index_daily", "description": "A股指数日K线"},
+    ],
+    "股票信息": [
+        {"name": "stock_info_a_code_name", "description": "A股代码名称列表"},
+        {"name": "stock_szse_sse_info", "description": "深交所/上交所信息"},
+    ],
+    "财务数据": [
+        {"name": "stock_financial_abstract", "description": "财务摘要"},
+        {"name": "stock_financial_analysis_indicator", "description": "财务分析指标"},
+        {"name": "stock_yjbb_em", "description": "业绩报表"},
+    ],
+    "龙虎榜": [
+        {"name": "stock_zt_pool_em", "description": "涨停板池"},
+        {"name": "stock_lhb_em", "description": "龙虎榜数据"},
+    ],
+    "沪深港通": [
+        {"name": "stock_hsgt_top10_em", "description": "沪深港通top10"},
+    ],
+}
+
+
+@router.get("/akshare/categories")
+def get_akshare_categories():
+    """获取akshare函数分类"""
+    return CATEGORIES
+
+
+@router.get("/akshare/functions")
+def get_akshare_functions():
+    """获取akshare函数列表"""
+    return list(AKSHARE_FUNCTIONS.values())
+
+
+@router.get("/akshare/function/{func_name}")
+def get_akshare_function(func_name: str):
+    """获取akshare函数详情"""
+    if func_name not in AKSHARE_FUNCTIONS:
+        raise HTTPException(status_code=404, detail=f"函数 {func_name} 不存在")
+    return AKSHARE_FUNCTIONS[func_name]
+
+
+@router.post("/akshare/execute")
+def execute_akshare_function(func_name: str, params: dict = {}):
+    """执行akshare函数"""
+    if func_name not in AKSHARE_FUNCTIONS:
+        raise HTTPException(status_code=404, detail=f"函数 {func_name} 不存在")
+
+    try:
+        import akshare as ak
+        func = getattr(ak, func_name)
+
+        # 过滤有效参数
+        valid_params = {}
+        func_params = AKSHARE_FUNCTIONS[func_name]["params"]
+        for p in func_params:
+            pname = p["name"]
+            if pname in params and params[pname]:
+                valid_params[pname] = params[pname]
+
+        if valid_params:
+            result = func(**valid_params)
+        else:
+            result = func()
+
+        # 转换为dict格式
+        if hasattr(result, 'to_dict'):
+            return {"data": result.to_dict('records'), "columns": list(result.columns) if hasattr(result, 'columns') else []}
+        elif isinstance(result, list):
+            return {"data": result, "columns": []}
+        else:
+            return {"data": str(result), "columns": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"执行失败: {str(e)}")
+
+
 # 修复导入
 from sqlmodel import Session
