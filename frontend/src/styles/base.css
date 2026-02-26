@@ -168,7 +168,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 input::placeholder {
-  color: var(--gray-400);
+  color: var(--gray-500);
 }
 
 label {
