@@ -14,6 +14,16 @@ interface ReviewData {
   marketCycle: string;
   sentimentLogic: string;
 
+  // 大盘指数
+  shIndex: string;
+  szIndex: string;
+  cyIndex: string;
+
+  // 资金流向
+  mainFlow: string;
+  instBuy: string;
+  instSell: string;
+
   // 涨停板复盘
   focusStocks: string;
   focusStocksLogic: string;
@@ -38,6 +48,17 @@ const DEFAULT_VALUES = {
   highestBoard: '',
   yesterdayLimitUp: '',
   marketCycle: '',
+
+  // 大盘指数
+  shIndex: '',
+  szIndex: '',
+  cyIndex: '',
+
+  // 资金流向
+  mainFlow: '',
+  instBuy: '',
+  instSell: '',
+
   sentimentLogic: `【为什么做】
 情绪是市场的「温度计」，决定赚钱难度。
 - 牛市（高潮期）：80%的股票都在涨，你随便买都可能赚
@@ -167,27 +188,75 @@ export default function SimplifiedReview() {
 
       const existingHistory = historyRes.data?.[0];
 
+      // 从表单数据中提取热门板块和涨停股
+      const hotSectors = extractHotSectors(data.focusStocks);
+      const limitUpStocks = extractLimitUpStocks(data.focusStocks);
+
+      const saveData = {
+        trade_date: today,
+        market_cycle: data.marketCycle,
+        position_plan: data.focusStocks?.split('\n').slice(1, 4).join('; ') || '',
+        status: 'completed',
+        planned_stock_count: data.focusStocks?.split('\n').length - 1 || 0,
+        // 新增的详细数据字段
+        sentiment_score: parseInt(data.limitUpCount) || 0,
+        up_count: 2000, // 从表单获取或留空
+        down_count: 1000, // 从表单获取或留空
+        limit_up_count: parseInt(data.limitUpCount) || 0,
+        limit_down_count: parseInt(data.limitDownCount) || 0,
+        break_up_count: parseInt(data.brokenPlateRatio) || 0,
+        // 大盘指数
+        sh_index: parseFloat(data.shIndex) || null,
+        sz_index: parseFloat(data.szIndex) || null,
+        cy_index: parseFloat(data.cyIndex) || null,
+        // 资金流向
+        main_flow: parseFloat(data.mainFlow) || null,
+        inst_buy: parseFloat(data.instBuy) || null,
+        inst_sell: parseFloat(data.instSell) || null,
+        // JSON字段
+        hot_sectors: hotSectors,
+        limit_up_stocks: limitUpStocks,
+        notes: data.sentimentLogic || ''
+      };
+
       if (existingHistory) {
         // 更新历史计划
-        await axios.put(`/api/plan/history/${existingHistory.id}`, {
-          trade_date: today,
-          market_cycle: data.marketCycle,
-          position_plan: data.focusStocks?.split('\n').slice(1, 4).join('; ') || '',
-          status: 'completed'
-        });
+        await axios.put(`/api/plan/history/${existingHistory.id}`, saveData);
       } else {
         // 创建历史计划
-        await axios.post('/api/plan/history', {
-          trade_date: today,
-          market_cycle: data.marketCycle,
-          position_plan: data.focusStocks?.split('\n').slice(1, 4).join('; ') || '',
-          status: 'completed',
-          planned_stock_count: data.focusStocks?.split('\n').length - 1 || 0
-        });
+        await axios.post('/api/plan/history', saveData);
       }
     } catch (err) {
       console.error('保存到数据库失败:', err);
     }
+  };
+
+  // 辅助函数：从focusStocks提取热门板块
+  const extractHotSectors = (text: string): string => {
+    if (!text) return '[]';
+    // 简单解析：如果包含股票代码，返回空列表（需要用户手动填写）
+    // 实际使用时可以从涨停板列表中提取
+    return '[]';
+  };
+
+  // 辅助函数：从focusStocks提取涨停股列表
+  const extractLimitUpStocks = (text: string): string => {
+    if (!text) return '[]';
+    // 解析格式：代码  名称  几连板  涨停原因
+    const stocks: Array<{code: string, name: string, boards: number, reason: string}> = [];
+    const lines = text.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 2 && /^\d{6}$/.test(parts[0])) {
+        stocks.push({
+          code: parts[0],
+          name: parts[1] || '',
+          boards: 1,
+          reason: parts.slice(2).join(' ') || ''
+        });
+      }
+    }
+    return JSON.stringify(stocks);
   };
 
   const handleGoToPlan = () => {
@@ -209,6 +278,16 @@ export default function SimplifiedReview() {
 - 最高板：${data.highestBoard}板
 - 昨日涨停溢价：${data.yesterdayLimitUp}%
 - 周期判断：${data.marketCycle}
+
+### 大盘指数
+- 上证指数：${data.shIndex || '-'}点
+- 深证指数：${data.szIndex || '-'}点
+- 创业板指：${data.cyIndex || '-'}点
+
+### 资金流向
+- 主力净流入：${data.mainFlow || '-'}亿
+- 机构买入：${data.instBuy || '-'}亿
+- 机构卖出：${data.instSell || '-'}亿
 
 ### 为什么做（逻辑）
 ${data.sentimentLogic}
@@ -413,6 +492,80 @@ ${data.combinedStocks}
                   </select>
                 </div>
               </div>
+
+              {/* 大盘指数输入 */}
+              <div className="quick-inputs" style={{ marginTop: '16px' }}>
+                <div className="quick-input">
+                  <label>上证指数</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.shIndex}
+                    onChange={(e) => updateField('shIndex', e.target.value)}
+                    placeholder="如: 3387.5"
+                  />
+                  <span className="unit">点</span>
+                </div>
+                <div className="quick-input">
+                  <label>深证指数</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.szIndex}
+                    onChange={(e) => updateField('szIndex', e.target.value)}
+                    placeholder="如: 11015"
+                  />
+                  <span className="unit">点</span>
+                </div>
+                <div className="quick-input">
+                  <label>创业板指</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.cyIndex}
+                    onChange={(e) => updateField('cyIndex', e.target.value)}
+                    placeholder="如: 2250.3"
+                  />
+                  <span className="unit">点</span>
+                </div>
+              </div>
+
+              {/* 资金流向输入 */}
+              <div className="quick-inputs" style={{ marginTop: '16px' }}>
+                <div className="quick-input">
+                  <label>主力净流入</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.mainFlow}
+                    onChange={(e) => updateField('mainFlow', e.target.value)}
+                    placeholder="如: 268.5"
+                  />
+                  <span className="unit">亿</span>
+                </div>
+                <div className="quick-input">
+                  <label>机构买入</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.instBuy}
+                    onChange={(e) => updateField('instBuy', e.target.value)}
+                    placeholder="如: 52.3"
+                  />
+                  <span className="unit">亿</span>
+                </div>
+                <div className="quick-input">
+                  <label>机构卖出</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.instSell}
+                    onChange={(e) => updateField('instSell', e.target.value)}
+                    placeholder="如: 30.1"
+                  />
+                  <span className="unit">亿</span>
+                </div>
+              </div>
             </div>
 
             {/* 为什么做 */}
@@ -459,12 +612,64 @@ ${data.combinedStocks}
                 <h3>用开盘啦情绪指标查看</h3>
               </div>
               <div className="how-content">
+                <p><strong>操作路径：</strong></p>
                 <ol>
-                  <li>打开开盘啦 → 首页顶部查看「情绪仪表盘」</li>
-                  <li>记录关键数据：涨停家数、炸板率、跌停家数、最高板</li>
-                  <li>根据数据对照周期判断标准</li>
-                  <li>根据周期决定今日仓位策略</li>
+                  <li>打开开盘啦 APP/网页 → 首页顶部「情绪仪表盘」</li>
+                  <li>点击「情绪指标」进入详情页</li>
                 </ol>
+
+                <p><strong>需要记录的关键数据：</strong></p>
+                <div className="tips-box">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>指标</th>
+                        <th>在哪里看</th>
+                        <th>记录什么</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>涨停家数</td>
+                        <td>情绪仪表盘/涨停板</td>
+                        <td>今日涨停了多少只股票</td>
+                      </tr>
+                      <tr>
+                        <td>跌停家数</td>
+                        <td>情绪仪表盘</td>
+                        <td>今日跌停了多少只股票</td>
+                      </tr>
+                      <tr>
+                        <td>炸板率</td>
+                        <td>情绪仪表盘/炸板分析</td>
+                        <td>涨停被打开的比例（越高越危险）</td>
+                      </tr>
+                      <tr>
+                        <td>最高板</td>
+                        <td>情绪仪表盘/连板池</td>
+                        <td>今日最高连板数（龙头高度）</td>
+                      </tr>
+                      <tr>
+                        <td>昨日溢价</td>
+                        <td>情绪仪表盘</td>
+                        <td>昨日涨停股今日平均涨幅</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <p><strong>判断步骤：</strong></p>
+                <ol>
+                  <li><strong>第一步：</strong>看涨停家数（&gt;50高潮，30-50发酵，&lt;10冰点）</li>
+                  <li><strong>第二步：</strong>看最高板（5板+龙头，3-4板发酵，1-2板退潮）</li>
+                  <li><strong>第三步：</strong>看炸板率（&lt;15%安全，&gt;35%危险）</li>
+                  <li><strong>第四步：</strong>对照周期表，确定今天是哪个周期</li>
+                  <li><strong>第五步：</strong>根据周期决定仓位（高潮8-10成，冰点0成）</li>
+                </ol>
+
+                <div className="reminder-box">
+                  <strong>💡 快捷入口：</strong>开盘啦首页顶部直接显示情绪仪表盘，可以快速看到所有关键指标
+                </div>
               </div>
             </div>
 
@@ -531,18 +736,43 @@ ${data.combinedStocks}
             <div className="card-section howtodo">
               <div className="card-header">
                 <span className="card-tag how">怎么做</span>
-                <h3>用涨停板分析，按时间排序找最早的涨停</h3>
+                <h3>用涨停板分析功能筛选目标股</h3>
               </div>
               <div className="how-content">
+                <p><strong>操作路径：</strong></p>
                 <ol>
                   <li>开盘啦首页 → 点击「涨停板」</li>
-                  <li>按「涨停时间」排序：越早越强</li>
-                  <li>按「封单金额」排序：越大越强</li>
-                  <li>按「流通市值」排序：越小越容易炒</li>
-                  <li>筛选连板股：5板以上是市场核心（重点关注）</li>
-                  <li>筛选首板找新题材：首次出现的概念</li>
-                  <li>选出3-5只明日重点关注</li>
                 </ol>
+
+                <p><strong>筛选步骤：</strong></p>
+                <ol>
+                  <li><strong>按涨停时间排序</strong>：越早越强（09:25最强，14:30最弱）</li>
+                  <li><strong>按封单金额排序</strong>：越大说明资金越看好</li>
+                  <li><strong>按流通市值排序</strong>：越小越容易炒作</li>
+                  <li><strong>筛选连板股</strong>：5板以上是市场核心（重点关注）</li>
+                  <li><strong>筛选首板</strong>：找新题材首次出现的股票</li>
+                </ol>
+
+                <div className="tips-box">
+                  <p><strong>龙头识别标准：</strong></p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>板数</th>
+                        <th>市场地位</th>
+                        <th>操作建议</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>7板+</td><td>市场总龙头</td><td>持股待涨，首次分歧可低吸</td></tr>
+                      <tr><td>5-6板</td><td>板块龙头</td><td>强势可持有，注意分化</td></tr>
+                      <tr><td>3-4板</td><td>跟风龙头</td><td>谨慎追高，注意炸板</td></tr>
+                      <tr><td>1-2板</td><td>启动初期</td><td>观察为主</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <p><strong>选出3-5只明日重点关注</strong>，记录到下方输入框</p>
               </div>
             </div>
 
@@ -623,15 +853,43 @@ ${data.combinedStocks}
             <div className="card-section howtodo">
               <div className="card-header">
                 <span className="card-tag how">怎么做</span>
-                <h3>用炸板分析功能</h3>
+                <h3>用炸板分析功能规避风险</h3>
               </div>
               <div className="how-content">
+                <p><strong>操作路径：</strong></p>
                 <ol>
                   <li>开盘啦首页 → 点击「炸板分析」</li>
-                  <li>查看炸板股列表：炸板时间、次数、回落幅度</li>
-                  <li>分析炸板原因：跟风/板块/量能/大盘</li>
-                  <li>记录反思：为什么炸？选的股不行还是时机不对？</li>
                 </ol>
+
+                <p><strong>分析要点：</strong></p>
+                <ol>
+                  <li><strong>看炸板率</strong>：炸板率&gt;35%说明市场很弱，小心</li>
+                  <li><strong>看炸板时间</strong>：越早炸板风险越大</li>
+                  <li><strong>看炸板次数</strong>：多次炸板说明资金不坚定</li>
+                  <li><strong>看回落幅度</strong>：从涨停跌下来越多，风险越大</li>
+                </ol>
+
+                <div className="tips-box warning">
+                  <p><strong>炸板类型分析：</strong></p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>类型</th>
+                        <th>特征</th>
+                        <th>风险</th>
+                        <th>应对</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>跟风炸板</td><td>龙头已封，跟风被炸</td><td>高</td><td>立即放弃</td></tr>
+                      <tr><td>板块炸板</td><td>整个板块回落</td><td>高</td><td>规避板块</td></tr>
+                      <tr><td>量能不足</td><td>封板资金不够</td><td>中</td><td>观察量价</td></tr>
+                      <tr><td>大盘拖累</td><td>大盘大跌拖累</td><td>中</td><td>等待修复</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <p><strong>反思记录：</strong>为什么炸？是选的股不行还是买入时机不对？</p>
               </div>
             </div>
 
@@ -718,17 +976,46 @@ ${data.combinedStocks}
             <div className="card-section howtodo">
               <div className="card-header">
                 <span className="card-tag how">怎么做</span>
-                <h3>用龙虎榜+资金流向功能</h3>
+                <h3>用龙虎榜+资金流向跟主力操作</h3>
               </div>
               <div className="how-content">
+                <p><strong>龙虎榜操作路径：</strong></p>
                 <ol>
                   <li>开盘啦首页 → 点击「龙虎榜」</li>
-                  <li>筛选「机构买入」：记录净买入前5</li>
-                  <li>筛选「游资买入」：记录知名游资席位动向</li>
-                  <li>分析合力：机构+游资同时买入最佳</li>
-                  <li>排除问题股：对倒股、温州帮、高位出货股</li>
-                  <li>用「资金流向」→「区间统计」看5日/10日持续净流入</li>
                 </ol>
+
+                <p><strong>分析步骤：</strong></p>
+                <ol>
+                  <li><strong>筛选「机构买入」</strong>：记录净买入前5（机构看长线）</li>
+                  <li><strong>筛选「游资买入」</strong>：记录知名游资席位动向（游资看短线）</li>
+                  <li><strong>分析合力</strong>：机构+游资同时买入最佳</li>
+                  <li><strong>排除问题股</strong>：对倒股、温州帮、高位出货股</li>
+                </ol>
+
+                <p><strong>资金流向操作路径：</strong></p>
+                <ol>
+                  <li>开盘啦首页 → 点击「资金流向」</li>
+                  <li>点击「区间统计」看5日/10日/30日持续净流入</li>
+                </ol>
+
+                <div className="tips-box">
+                  <p><strong>资金形态判断：</strong></p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>资金形态</th>
+                        <th>特征</th>
+                        <th>信号含义</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>持续净流入</td><td>5日/10日连续流入</td><td>主线热点</td></tr>
+                      <tr><td>首次净流入</td><td>今日首次大幅流入</td><td>启动信号</td></tr>
+                      <tr><td>净流出</td><td>连续流出</td><td>行情结束</td></tr>
+                      <tr><td>反复流入</td><td>时进时出</td><td>震荡行情</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 

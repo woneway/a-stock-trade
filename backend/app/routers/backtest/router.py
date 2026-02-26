@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import date, timedelta
 from pydantic import BaseModel
 
 from app.database import engine
-from app.routers.backtest.engine import BacktestEngine
+from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine as BacktestEngine
 
 
 def get_db():
@@ -22,6 +22,10 @@ class BacktestRequest(BaseModel):
     end_date: str
     initial_capital: float = 100000
     strategy_type: str = "ma_cross"
+    # 自定义策略ID (当使用自定义策略时)
+    strategy_id: Optional[int] = None
+    # 自定义策略参数 (当使用自定义策略时)
+    strategy_params: Optional[Dict[str, Any]] = None
     fast_period: Optional[int] = 10
     slow_period: Optional[int] = 20
     rsi_period: Optional[int] = 14
@@ -66,9 +70,39 @@ def run_backtest(
     if df.empty or len(df) < 10:
         raise HTTPException(
             status_code=404,
-            detail=f"未找到股票 {request.stock_code} 的足够K线数据"
+            detail=f"未找到股票 {request.stock_code} 的足够K线数据。请先通过数据同步功能获取K线数据，或检查网络连接后重试。"
         )
 
+    # 检查是否是自定义策略
+    if request.strategy_id:
+        # 从数据库获取自定义策略
+        from app.models.backtest_strategy import BacktestStrategy
+
+        strategy = db.get(BacktestStrategy, request.strategy_id)
+        if not strategy:
+            raise HTTPException(status_code=404, detail="策略不存在")
+
+        if not strategy.is_active:
+            raise HTTPException(status_code=400, detail="策略已停用")
+
+        # 获取参数
+        params = request.strategy_params or {}
+        if not params and strategy.params_definition:
+            # 从请求中提取参数
+            for param in strategy.params_definition:
+                param_name = param.get("name")
+                if param_name:
+                    # 尝试从请求中获取参数值
+                    req_dict = request.model_dump()
+                    if param_name in req_dict:
+                        params[param_name] = req_dict[param_name]
+                    elif param.get("default") is not None:
+                        params[param_name] = param.get("default")
+
+        result = engine.run_custom_strategy(df, strategy.code, params)
+        return BacktestResult(**result)
+
+    # 内置策略
     strategy_map = {
         "ma_cross": lambda: engine.run_ma_cross(
             df, request.fast_period or 10, request.slow_period or 20
@@ -123,74 +157,104 @@ def get_backtest_stocks(
 @router.get("/klines/{stock_code}")
 def get_backtest_klines(
     stock_code: str,
-    db: Session = Depends(get_db),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     limit: int = 500
 ):
     """获取回测用K线数据"""
+    from app.services.data_service import DataService
+
     if not start_date:
         start_date = (date.today() - timedelta(days=365)).strftime("%Y-%m-%d")
     if not end_date:
         end_date = date.today().strftime("%Y-%m-%d")
 
-    from app.routers.backtest.engine import get_kline_data
-    klines = get_kline_data(db, stock_code, start_date, end_date)
+    df = DataService.get_kline_dataframe(stock_code, start_date, end_date)
 
-    return [
-        {
-            "date": k.trade_date,
-            "open": k.open,
-            "high": k.high,
-            "low": k.low,
-            "close": k.close,
-            "volume": k.volume,
-            "pct_chg": k.pct_chg,
-        }
-        for k in klines[:limit]
-    ]
+    if df is None or df.empty:
+        return []
+
+    return df.head(limit).to_dict('records')
 
 
 @router.get("/strategies")
-def get_available_strategies():
-    """获取可用的策略列表"""
-    return [
+def get_available_strategies(
+    db: Session = Depends(get_db)
+):
+    """获取可用的策略列表 (包括内置和自定义)"""
+
+    # 内置策略 (兼容旧格式)
+    builtin_strategies = [
         {
             "id": "ma_cross",
             "name": "双均线交叉",
             "description": "快速均线上穿慢速均线买入，下穿卖出",
+            "strategy_type": "builtin",
             "params": [
-                {"name": "fast_period", "label": "快速均线周期", "default": 10, "min": 5, "max": 50},
-                {"name": "slow_period", "label": "慢速均线周期", "default": 20, "min": 10, "max": 200},
+                {"name": "fast_period", "label": "快速均线周期", "default": 10, "min": 5, "max": 50, "type": "int"},
+                {"name": "slow_period", "label": "慢速均线周期", "default": 20, "min": 10, "max": 200, "type": "int"},
             ]
         },
         {
             "id": "rsi",
             "name": "RSI超买超卖",
             "description": "RSI低于下界买入，高于上界卖出",
+            "strategy_type": "builtin",
             "params": [
-                {"name": "rsi_period", "label": "RSI周期", "default": 14, "min": 5, "max": 30},
-                {"name": "rsi_upper", "label": "超买阈值", "default": 70, "min": 50, "max": 90},
-                {"name": "rsi_lower", "label": "超卖阈值", "default": 30, "min": 10, "max": 50},
+                {"name": "rsi_period", "label": "RSI周期", "default": 14, "min": 5, "max": 30, "type": "int"},
+                {"name": "rsi_upper", "label": "超买阈值", "default": 70, "min": 50, "max": 90, "type": "int"},
+                {"name": "rsi_lower", "label": "超卖阈值", "default": 30, "min": 10, "max": 50, "type": "int"},
             ]
         },
         {
             "id": "macd",
             "name": "MACD",
             "description": "MACD柱状图上穿0轴买入，下穿卖出",
+            "strategy_type": "builtin",
             "params": [
-                {"name": "macd_fast", "label": "快线周期", "default": 12, "min": 5, "max": 30},
-                {"name": "macd_slow", "label": "慢线周期", "default": 26, "min": 15, "max": 50},
-                {"name": "macd_signal", "label": "信号线周期", "default": 9, "min": 5, "max": 20},
+                {"name": "macd_fast", "label": "快线周期", "default": 12, "min": 5, "max": 30, "type": "int"},
+                {"name": "macd_slow", "label": "慢线周期", "default": 26, "min": 15, "max": 50, "type": "int"},
+                {"name": "macd_signal", "label": "信号线周期", "default": 9, "min": 5, "max": 20, "type": "int"},
             ]
         },
         {
             "id": "bollinger",
             "name": "布林带",
             "description": "价格跌破下轨买入，突破上轨卖出",
+            "strategy_type": "builtin",
             "params": [
-                {"name": "bb_period", "label": "布林带周期", "default": 20, "min": 10, "max": 50},
-                {"name": "bb_std", "label": "标准差倍数", "default": 2.0, "min": 1.5, "max": 3.0},
+                {"name": "bb_period", "label": "布林带周期", "default": 20, "min": 10, "max": 50, "type": "int"},
+                {"name": "bb_std", "label": "标准差倍数", "default": 2.0, "min": 1.5, "max": 3.0, "type": "float"},
             ]
         },
     ]
+
+    # 从数据库获取自定义策略
+    from app.models.backtest_strategy import BacktestStrategy
+    import json as json_mod
+
+    custom_strategies = db.exec(
+        select(BacktestStrategy).where(BacktestStrategy.is_active == True)
+    ).all()
+
+    custom_list = []
+    for s in custom_strategies:
+        try:
+            params = json_mod.loads(s.params_definition or "[]")
+        except:
+            params = []
+
+        custom_list.append({
+            "id": str(s.id),  # 使用字符串ID以区分内置策略
+            "name": s.name,
+            "description": s.description or "",
+            "strategy_type": s.strategy_type,
+            "params": params,
+            "is_builtin": s.is_builtin,
+        })
+
+    return {
+        "builtin": builtin_strategies,
+        "custom": custom_list,
+        "all": builtin_strategies + custom_list,
+    }

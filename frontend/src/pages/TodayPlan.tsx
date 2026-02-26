@@ -69,6 +69,9 @@ interface PrePlan {
   status?: string;
   sentiment?: string;
   external_signals?: string;
+  position_plan?: string;
+  stop_loss?: number;
+  take_profit?: string;
 }
 
 interface Trade {
@@ -389,7 +392,6 @@ export default function TodayPlan() {
             >
               <span className="tab-icon">🌅</span>
               <span className="tab-label">盘前</span>
-              <span className="tab-desc">制定计划</span>
             </button>
             <button
               className={`market-tab ${activeTab === 'in' ? 'active' : ''}`}
@@ -412,85 +414,22 @@ export default function TodayPlan() {
           <div className="tab-content">
             {activeTab === 'pre' && (
               <div className="pre-market">
-                {latestReview && (
-                  <div className="today-focus-card">
-                    <div className="focus-card-header">
-                      <h3>⭐ 昨日复盘回顾</h3>
-                      <a href="/reviews" className="btn-link">查看历史 →</a>
-                    </div>
-                    <div className="focus-grid">
-                      <div className="focus-item">
-                        <span className="focus-label">情绪周期</span>
-                        <span className="focus-value highlight">{latestReview.market_cycle || '-'}</span>
+                {/* 简洁版计划展示 - 只保留核心内容 */}
+                {todayPlan && (
+                  <div className="plan-summary">
+                    {/* 仓位和情绪 */}
+                    <div className="plan-highlight">
+                      <div className="highlight-item">
+                        <span className="highlight-label">情绪周期</span>
+                        <span className="highlight-value">{todayPlan.sentiment || '-'}</span>
                       </div>
-                      <div className="focus-item">
-                        <span className="focus-label">仓位建议</span>
-                        <span className="focus-value">{latestReview.position_advice || '-'}</span>
-                      </div>
-                      <div className="focus-item">
-                        <span className="focus-label">大盘位置</span>
-                        <span className="focus-value">{latestReview.above_20ma ? '20日线上 ↑' : '20日线之下'}</span>
-                      </div>
-                      <div className="focus-item">
-                        <span className="focus-label">上涨家数</span>
-                        <span className="focus-value">{latestReview.up_count ?? '-'}</span>
-                      </div>
-                      <div className="focus-item">
-                        <span className="focus-label">成交额</span>
-                        <span className="focus-value">{latestReview.turnover ? `${latestReview.turnover}亿` : '-'}</span>
-                      </div>
-                      <div className="focus-item">
-                        <span className="focus-label">最高连板</span>
-                        <span className="focus-value">{latestReview.highest_board ?? '-'}</span>
+                      <div className="highlight-item">
+                        <span className="highlight-label">目标仓位</span>
+                        <span className="highlight-value">{todayPlan.position_plan || '-'}</span>
                       </div>
                     </div>
-                    <div className="focus-row">
-                      <span className="focus-label">热门板块:</span>
-                      <span className="focus-value">
-                        {latestReview.hot_sectors?.slice(0, 3).map((s, i) => (
-                          <span key={i} className="sector-tag">{s}</span>
-                        )) || '-'}
-                      </span>
-                    </div>
-                    {latestReview.risk_warning && (
-                      <div className="focus-row risk">
-                        <span className="focus-label">⚠️ 风险提示:</span>
-                        <span className="focus-value">{latestReview.risk_warning}</span>
-                      </div>
-                    )}
                   </div>
                 )}
-
-                <div className="market-env-section">
-                  <div className="env-card">
-                    <h4>📊 关注指标</h4>
-                    <div className="indicator-tags compact">
-                      {DEFAULT_INDICATORS.map(indicator => (
-                        <span
-                          key={indicator}
-                          className={`tag ${watchIndicators.includes(indicator) ? 'active' : ''}`}
-                          onClick={() => todayPlan?.id && toggleIndicator(indicator)}
-                        >
-                          {indicator}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="env-card">
-                    <h4>📰 关注消息</h4>
-                    <div className="indicator-tags compact">
-                      {DEFAULT_MESSAGES.map(message => (
-                        <span
-                          key={message}
-                          className={`tag ${watchMessages.includes(message) ? 'active' : ''}`}
-                          onClick={() => todayPlan?.id && toggleMessage(message)}
-                        >
-                          {message}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
 
                 <div className="plan-section">
                   <h3>📈 候选股票 ({candidateStocks.length})</h3>

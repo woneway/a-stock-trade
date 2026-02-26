@@ -15,8 +15,17 @@ interface ReviewListItem {
   created_at: string;
 }
 
+interface HistoryPlan {
+  id: number;
+  status: string;
+  plannedStockCount: number;
+  executedStockCount: number;
+  executionRate: number;
+}
+
 export default function ReviewList() {
   const [reviews, setReviews] = useState<ReviewListItem[]>([]);
+  const [historyPlans, setHistoryPlans] = useState<Record<string, HistoryPlan>>({});
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -50,6 +59,23 @@ export default function ReviewList() {
         },
       });
       setTotal(countRes.data?.total || 0);
+
+      // 加载历史计划数据用于关联显示
+      try {
+        const historyRes = await axios.get('/api/plan/history', {
+          params: { limit: 100 }
+        });
+        const plansMap: Record<string, HistoryPlan> = {};
+        historyRes.data?.forEach((plan: HistoryPlan) => {
+          // 使用 tradeDate 作为 key
+          if (plan.id) {
+            plansMap[plan.id] = plan;
+          }
+        });
+        setHistoryPlans(plansMap);
+      } catch (e) {
+        console.error('加载历史计划失败', e);
+      }
     } catch (err) {
       console.error('Failed to load reviews:', err);
     } finally {
@@ -147,6 +173,7 @@ export default function ReviewList() {
                   <th>涨停数</th>
                   <th>成交额(亿)</th>
                   <th>热门板块</th>
+                  <th>关联计划</th>
                   <th>风险提示</th>
                   <th>操作</th>
                 </tr>
@@ -169,6 +196,22 @@ export default function ReviewList() {
                       {review.hot_sectors && review.hot_sectors.length > 2 && (
                         <span className="more-tag">+{review.hot_sectors.length - 2}</span>
                       )}
+                    </td>
+                    <td>
+                      {/* 查找该日期对应的历史计划 - 通过ID匹配 */}
+                      {(() => {
+                        // 查找最早创建的历史计划（通常对应这个复盘日期）
+                        const plans = Object.values(historyPlans).filter(p => p.id);
+                        if (plans.length > 0) {
+                          const plan = plans[0]; // 显示第一个找到的计划
+                          return (
+                            <Link to={`/history/${plan.id}`} className="plan-link">
+                              {plan.plannedStockCount || 0}只 / {plan.executedStockCount || 0}只 / {plan.executionRate || 0}%
+                            </Link>
+                          );
+                        }
+                        return '-';
+                      })()}
                     </td>
                     <td className="risk-cell">
                       {review.risk_warning ? (

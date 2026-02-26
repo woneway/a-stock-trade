@@ -1,8 +1,9 @@
-from typing import List, Dict, Optional, Any
-from datetime import date, datetime, timedelta
-from sqlmodel import Session, select
+"""
+使用统一数据服务的回测引擎
+"""
+from typing import Dict, Any
 import pandas as pd
-from app.models.external_data import StockKline, StockBasic
+from app.services.data_service import DataService
 
 
 class BacktestEngine:
@@ -10,46 +11,20 @@ class BacktestEngine:
 
     def __init__(self, initial_capital: float = 100000):
         self.initial_capital = initial_capital
-        self.results: Optional[Dict] = None
+        self.results: Dict = {}
 
     def get_kline_dataframe(
         self,
-        session: Session,
         stock_code: str,
         start_date: str,
         end_date: str
     ) -> pd.DataFrame:
-        """获取K线数据并转换为DataFrame"""
-        stock = session.exec(
-            select(StockBasic).where(StockBasic.code == stock_code)
-        ).first()
-
-        if not stock:
-            return pd.DataFrame()
-
-        klines = session.exec(
-            select(StockKline).where(
-                StockKline.stock_id == stock.id,
-                StockKline.trade_date >= start_date,
-                StockKline.trade_date <= end_date,
-            ).order_by(StockKline.trade_date.asc())
-        ).all()
-
-        if not klines:
-            return pd.DataFrame()
-
-        data = []
-        for k in klines:
-            data.append({
-                'Open': k.open or 0,
-                'High': k.high or 0,
-                'Low': k.low or 0,
-                'Close': k.close or 0,
-                'Volume': k.volume or 0,
-            })
-
-        df = pd.DataFrame(data)
-        return df
+        """使用统一数据服务获取K线数据"""
+        return DataService.get_kline_dataframe(
+            stock_code=stock_code,
+            start_date=start_date,
+            end_date=end_date
+        )
 
     def run_ma_cross(
         self,
@@ -102,7 +77,6 @@ class BacktestEngine:
     ) -> Dict[str, Any]:
         """RSI超买超卖策略"""
         from backtesting import Backtest, Strategy
-        from backtesting.lib import crossover
 
         def RSI(series, n):
             delta = series.diff()
@@ -150,7 +124,6 @@ class BacktestEngine:
         """MACD策略"""
         from backtesting import Backtest, Strategy
         from backtesting.lib import crossover
-        import numpy as np
 
         def MACD(series, n_fast, n_slow, n_signal):
             ema_fast = series.ewm(span=n_fast, adjust=False).mean()
@@ -196,7 +169,6 @@ class BacktestEngine:
     ) -> Dict[str, Any]:
         """布林带策略"""
         from backtesting import Backtest, Strategy
-        from backtesting.lib import crossover
 
         class BollingerStrategy(Strategy):
             bb_period = period
@@ -230,8 +202,7 @@ class BacktestEngine:
     def _format_stats(self, stats) -> Dict[str, Any]:
         """格式化回测结果"""
         import math
-        import numpy as np
-        
+
         def safe_float(val, default=0.0):
             if val is None:
                 return default
@@ -256,29 +227,5 @@ class BacktestEngine:
             "worst_trade": safe_float(stats.get('Worst Trade (%)'), 0),
             "avg_trade": safe_float(stats.get('Avg. Trade (%)'), 0),
         }
-        
-        # Convert all values to native Python floats to avoid numpy serialization issues
+
         return {k: float(v) if v is not None else 0 for k, v in result.items()}
-
-
-def get_kline_data(
-    session: Session,
-    stock_code: str,
-    start_date: str,
-    end_date: str
-) -> List[StockKline]:
-    """获取K线数据"""
-    stock = session.exec(
-        select(StockBasic).where(StockBasic.code == stock_code)
-    ).first()
-
-    if not stock:
-        return []
-
-    return session.exec(
-        select(StockKline).where(
-            StockKline.stock_id == stock.id,
-            StockKline.trade_date >= start_date,
-            StockKline.trade_date <= end_date,
-        ).order_by(StockKline.trade_date.asc())
-    ).all()
