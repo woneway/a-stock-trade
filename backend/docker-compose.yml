@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db-asset:
+    image: mysql:8.0
+    container_name: my-mysql-astocktrader
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: astocktrader
+      MYSQL_DATABASE: astocktrader
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - mysql-data-asset:/var/lib/mysql
+
+volumes:
+  mysql-data-asset:
