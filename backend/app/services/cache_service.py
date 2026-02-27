@@ -805,7 +805,7 @@ class CacheService:
                 records = session.exec(
                     select(ExternalIndividualFundFlow).where(
                         ExternalIndividualFundFlow.code == stock_code
-                    ).order_by(ExternalIndividualFundFlow.trade_date.desc()).limit(10)
+                    ).order_by(ExternalIndividualFundFlow.trade_date.desc()).limit(120)
                 ).all()
                 if records:
                     return [r.model_dump() for r in records]
