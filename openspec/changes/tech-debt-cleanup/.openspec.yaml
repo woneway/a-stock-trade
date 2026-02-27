@@ -1,4 +1,4 @@
 name: tech-debt-cleanup
 description: 清理项目技术债务，修复安全问题，删除未使用代码
-status: planning
+status: completed
 created_at: "2026-02-27"
