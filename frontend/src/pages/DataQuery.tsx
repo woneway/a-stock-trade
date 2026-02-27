@@ -32,6 +32,20 @@ export default function DataQuery() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [apiCategories, setApiCategories] = useState<Record<string, Array<{name: string, description: string}>> | null>(null);
+
+  // 从API加载分类
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await axios.get('/api/data/akshare/categories');
+        setApiCategories(res.data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+    };
+    loadCategories();
+  }, []);
   // 接口状态（测试结果）
   const [funcStatus, setFuncStatus] = useState<Record<string, 'testing' | 'success' | 'error' | null>>({
     "stock_zh_a_minute": "success",
@@ -377,18 +391,59 @@ export default function DataQuery() {
     },
   ], []);
 
+  // 将API分类转换为前端格式
+  const apiCategoriesFormatted = useMemo(() => {
+    if (!apiCategories) return null;
+    const iconMap: Record<string, string> = {
+      '【一】A股行情': '📈',
+      '【二】港股行情': '🏢',
+      '【三】美股行情': '🇺🇸',
+      '【四】指数数据': '📊',
+      '【五】板块行情': '🔄',
+      '【六】资金流向': '💰',
+      '【七】龙虎榜': '🐯',
+      '【八】股东数据': '👥',
+      '【九】财务报表': '📋',
+      '【十】融资融券': '💳',
+      '【十一】大宗交易/限售股': '📦',
+      '【十二】沪深港通': '🌏',
+      '【十三】基金数据': '💵',
+      '【十四】期货行情': '📉',
+      '【十五】期权行情': '🎯',
+      '【十六】债券数据': '📑',
+      '【十七】宏观数据': '🏛️',
+      '【十八】外汇数据': '💱',
+      '【十九】新股/IPO': '🆕',
+      '【二十】基础信息': '📋',
+      '【二十一】资讯数据': '📰',
+      '【二十二】补充函数': '➕',
+    };
+
+    return Object.entries(apiCategories).map(([name, items]) => ({
+      name: name.replace(/^【\d+】/, ''), // 去掉序号
+      icon: iconMap[name] || '📌',
+      items: items.map((item: any) => ({
+        name: item.name,
+        desc: item.description || item.name
+      }))
+    }));
+  }, [apiCategories]);
+
+  // 优先使用API分类，否则使用硬编码
+  const effectiveCategories = apiCategoriesFormatted || categories;
+
   // 过滤函数
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
+    if (!searchQuery.trim()) return effectiveCategories;
     const q = searchQuery.toLowerCase();
-    return categories.map(cat => ({
+    return effectiveCategories.map(cat => ({
       ...cat,
       items: cat.items.filter(item =>
         item.name.toLowerCase().includes(q) ||
         item.desc.toLowerCase().includes(q)
       )
     })).filter(cat => cat.items.length > 0);
-  }, [categories, searchQuery]);
+  }, [effectiveCategories, searchQuery]);
 
   useEffect(() => {
     fetchFunctionDetail(selectedFunction);
