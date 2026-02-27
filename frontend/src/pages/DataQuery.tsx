@@ -32,6 +32,7 @@ export default function DataQuery() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [funcStatus, setFuncStatus] = useState<Record<string, 'testing' | 'success' | 'error' | null>>({});
 
   // 游资常用分类
   const categories = useMemo(() => [
@@ -325,6 +326,21 @@ export default function DataQuery() {
     }
   };
 
+  // 测试接口连接状态
+  const testConnection = async (funcName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFuncStatus(prev => ({ ...prev, [funcName]: 'testing' }));
+    try {
+      const res = await axios.post(`/api/data/akshare/execute`, {
+        func_name: funcName,
+        params: {}
+      });
+      setFuncStatus(prev => ({ ...prev, [funcName]: 'success' }));
+    } catch (err) {
+      setFuncStatus(prev => ({ ...prev, [funcName]: 'error' }));
+    }
+  };
+
   const handleQuery = async () => {
     setQueryLoading(true);
     setQueryError(null);
@@ -388,8 +404,25 @@ export default function DataQuery() {
                       fetchFunctionDetail(item.name);
                     }}
                   >
-                    <span className="item-name">{item.name}</span>
+                    <span className="item-name">
+                      {funcStatus[item.name] === 'success' && <span style={{color: '#52c41a'}}>✅ </span>}
+                      {funcStatus[item.name] === 'error' && <span style={{color: '#ff4d4f'}}>❌ </span>}
+                      {funcStatus[item.name] === 'testing' && <span style={{color: '#1890ff'}}>🔄 </span>}
+                      {item.name}
+                    </span>
                     <span className="item-desc">{item.desc}</span>
+                    <span
+                      className="dq-status-btn"
+                      onClick={(e) => testConnection(item.name, e)}
+                      title="测试连接"
+                      style={{
+                        opacity: funcStatus[item.name] === 'testing' ? 1 : 0.5,
+                        fontSize: '10px',
+                        marginLeft: '4px'
+                      }}
+                    >
+                      {funcStatus[item.name] === 'testing' ? '🔄' : '⬤'}
+                    </span>
                   </button>
                 ))}
               </div>

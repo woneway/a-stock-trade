@@ -2160,10 +2160,26 @@ def execute_akshare_function(request: AkshareExecuteRequest):
         else:
             result = func()
 
-        # 转换为dict格式
+        # 转换为dict格式，处理NaN值
+        def clean_value(v):
+            import math
+            if v is None:
+                return None
+            if isinstance(v, float):
+                if math.isnan(v) or math.isinf(v):
+                    return None
+            return v
+
+        def clean_record(record):
+            return {k: clean_value(v) for k, v in record.items()}
+
         if hasattr(result, 'to_dict'):
-            return {"data": result.to_dict('records'), "columns": list(result.columns) if hasattr(result, 'columns') else []}
+            records = result.to_dict('records')
+            cleaned_records = [clean_record(r) for r in records]
+            return {"data": cleaned_records, "columns": list(result.columns) if hasattr(result, 'columns') else []}
         elif isinstance(result, list):
+            if result and isinstance(result[0], dict):
+                result = [clean_record(r) if isinstance(r, dict) else r for r in result]
             return {"data": result, "columns": []}
         else:
             return {"data": str(result), "columns": []}
