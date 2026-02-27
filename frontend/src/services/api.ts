@@ -151,4 +151,89 @@ export const settingsApi = {
   },
 };
 
+// ==================== 业务数据 API ====================
+
+// 交易计划 API
+export const tradingPlanApi = {
+  getAll: (params?: { stock_code?: string; status?: string; limit?: number; offset?: number }) =>
+    api.get('/plans', { params }),
+  getById: (id: number) => api.get(`/plans/${id}`),
+  create: (data: any) => api.post('/plans', data),
+  update: (id: number, data: any) => api.put(`/plans/${id}`, data),
+  delete: (id: number) => api.delete(`/plans/${id}`),
+  getStats: () => api.get('/plans/stats/summary'),
+};
+
+// 持仓 API (业务数据)
+export const tradingPositionApi = {
+  getAll: (params?: { stock_code?: string; status?: string; limit?: number; offset?: number }) =>
+    api.get('/positions', { params }),
+  getById: (id: number) => api.get(`/positions/${id}`),
+  create: (data: any) => api.post('/positions', data),
+  update: (id: number, data: any) => api.put(`/positions/${id}`, data),
+  delete: (id: number) => api.delete(`/positions/${id}`),
+  setStopLoss: (id: number, stopLoss: number) =>
+    api.put(`/positions/${id}/stop-loss`, null, { params: { stop_loss: stopLoss } }),
+  setTakeProfit: (id: number, takeProfit: number) =>
+    api.put(`/positions/${id}/take-profit`, null, { params: { take_profit: takeProfit } }),
+  close: (id: number, closePrice: number) =>
+    api.post(`/positions/${id}/close`, null, { params: { close_price: closePrice } }),
+  getStats: () => api.get('/positions/stats/summary'),
+};
+
+// 成交记录 API (业务数据)
+export const tradingTradeApi = {
+  getAll: (params?: {
+    stock_code?: string;
+    trade_type?: string;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  }) => api.get('/trades', { params }),
+  getById: (id: number) => api.get(`/trades/${id}`),
+  create: (data: any) => api.post('/trades', data),
+  delete: (id: number) => api.delete(`/trades/${id}`),
+  getStats: (params?: { start_date?: string; end_date?: string }) =>
+    api.get('/trades/stats/summary', { params }),
+};
+
+// 策略 API (业务数据)
+export const tradingStrategyApi = {
+  getAll: (params?: { strategy_type?: string; is_active?: boolean; limit?: number; offset?: number }) =>
+    api.get('/strategies', { params }),
+  getById: (id: number) => api.get(`/strategies/${id}`),
+  create: (data: any) => api.post('/strategies', data),
+  update: (id: number, data: any) => api.put(`/strategies/${id}`, data),
+  delete: (id: number) => api.delete(`/strategies/${id}`),
+  toggle: (id: number) => api.put(`/strategies/${id}/toggle`),
+};
+
+// 信号 API
+export const signalApi = {
+  getAll: (params?: { strategy_id?: number; stock_code?: string; signal_type?: string; limit?: number; offset?: number }) =>
+    api.get('/signals', { params }),
+  getById: (id: number) => api.get(`/signals/${id}`),
+  create: (data: any) => api.post('/signals', data),
+  delete: (id: number) => api.delete(`/signals/${id}`),
+};
+
+// 回测结果 API
+export const backtestResultApi = {
+  getAll: (params?: { strategy_id?: number; limit?: number; offset?: number }) =>
+    api.get('/backtests', { params }),
+  getById: (id: number) => api.get(`/backtests/${id}`),
+  create: (data: any) => api.post('/backtests', data),
+  delete: (id: number) => api.delete(`/backtests/${id}`),
+};
+
+// 策略迭代 API
+export const iterationApi = {
+  getAll: (params?: { strategy_id?: number; limit?: number; offset?: number }) =>
+    api.get('/iterations', { params }),
+  getById: (id: number) => api.get(`/iterations/${id}`),
+  create: (data: any) => api.post('/iterations', data),
+  delete: (id: number) => api.delete(`/iterations/${id}`),
+};
+
 export default api;

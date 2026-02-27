@@ -21,10 +21,22 @@ from app.models.external_yz_common import (
     ExternalLhbYytj,
     ExternalLhbYyb,
 )
+from app.models.trading import (
+    TradingPlan,
+    TradingReview,
+    Position,
+    Order,
+    Trade,
+    Strategy,
+    StrategySignal,
+    BacktestResult,
+    StrategyIteration,
+)
 
 __all__ = [
     "Plan",
     "BacktestStrategy",
+    # 外部数据
     "ExternalStockBasic",
     "ExternalStockQuote",
     "ExternalStockKline",
@@ -43,4 +55,14 @@ __all__ = [
     "ExternalLhbDetail",
     "ExternalLhbYytj",
     "ExternalLhbYyb",
+    # 业务数据
+    "TradingPlan",
+    "TradingReview",
+    "Position",
+    "Order",
+    "Trade",
+    "Strategy",
+    "StrategySignal",
+    "BacktestResult",
+    "StrategyIteration",
 ]

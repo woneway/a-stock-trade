@@ -7,6 +7,8 @@ import Trades from './pages/Trades';
 import StrategyAnalysis from './pages/StrategyAnalysis';
 import Daily from './pages/Daily';
 import DataQuery from './pages/DataQuery';
+import TradingPlans from './pages/TradingPlans';
+import StrategyManage from './pages/StrategyManage';
 import './styles/index.css';
 
 function App() {
@@ -17,6 +19,10 @@ function App() {
 
         {/* 计划与复盘 - 核心功能 */}
         <Route path="/daily" element={<Daily />} />
+
+        {/* 业务数据 - 新增 */}
+        <Route path="/trading-plans" element={<TradingPlans />} />
+        <Route path="/strategy-manage" element={<StrategyManage />} />
 
         {/* 持仓与交易 */}
         <Route path="/positions" element={<Positions />} />

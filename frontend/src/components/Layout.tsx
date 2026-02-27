@@ -11,6 +11,10 @@ const menuItems: MenuItem[] = [
   // 核心功能
   { path: '/daily', label: '计划与复盘', icon: '📋' },
 
+  // 业务数据
+  { path: '/trading-plans', label: '交易计划', icon: '📝' },
+  { path: '/strategy-manage', label: '策略管理', icon: '🎯' },
+
   // 持仓与交易
   { path: '/positions', label: '持仓', icon: '💼' },
   { path: '/trades', label: '交易记录', icon: '📜' },
