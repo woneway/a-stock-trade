@@ -6,3 +6,7 @@ dist/
 *.pyc
 __pycache__/
 *.db
+
+# Database
+*.db
+*.sqlite
