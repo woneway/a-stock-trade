@@ -1,75 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-from typing import List, Optional
-from datetime import date, timedelta
-from pydantic import BaseModel
+"""
+计划与复盘 API
+"""
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional, List
+from datetime import date
 
-from app.database import get_db
-from app.models.daily import Plan
-
+from app.services.daily_service import DailyService
 
 router = APIRouter(prefix="/api/daily", tags=["daily"])
 
 
-class PlanCreate(BaseModel):
-    type: str = "plan"
-    trade_date: date
-    content: str = ""
-    template: Optional[str] = None
-    tags: Optional[str] = None
-    related_id: Optional[int] = None
-    stock_count: Optional[int] = 0
-    execution_rate: Optional[float] = 0.0
-    pnl: Optional[float] = 0.0
-
-
-class PlanUpdate(BaseModel):
-    content: Optional[str] = None
-    status: Optional[str] = None
-    stock_count: Optional[int] = None
-    execution_rate: Optional[float] = None
-    pnl: Optional[float] = None
-    tags: Optional[str] = None
-
-
-class PlanResponse(BaseModel):
-    id: int
-    type: str
-    trade_date: date
-    status: str
-    template: Optional[str]
-    content: Optional[str]
-    related_id: Optional[int]
-    stock_count: int
-    execution_rate: float
-    pnl: float
-    tags: Optional[str]
-    created_at: date
-    updated_at: date
-
-    # 关联的计划/复盘
-    related_plan: Optional[dict] = None
-
-
-@router.get("/plans", response_model=List[PlanResponse])
+@router.get("/plans")
 def get_plans(
-    db: Session = Depends(get_db),
     type: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     limit: int = 100
 ):
     """获取计划/复盘列表"""
-    statement = select(Plan).order_by(Plan.trade_date.desc()).limit(limit)
-
-    if type:
-        statement = statement.where(Plan.type == type)
-    if start_date:
-        statement = statement.where(Plan.trade_date >= start_date)
-    if end_date:
-        statement = statement.where(Plan.trade_date <= end_date)
-
-    plans = db.exec(statement).all()
+    plans = DailyService.list(
+        type=type,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit
+    )
 
     # 转换结果并添加关联数据
     result = []
@@ -77,7 +31,7 @@ def get_plans(
         plan_dict = p.model_dump()
         # 获取关联的计划/复盘
         if p.related_id:
-            related = db.get(Plan, p.related_id)
+            related = DailyService.get(p.related_id)
             if related:
                 plan_dict['related_plan'] = {
                     'id': related.id,
@@ -91,117 +45,68 @@ def get_plans(
 
 
 @router.get("/plans/today")
-def get_today_plan(db: Session = Depends(get_db)):
+def get_today_plan():
     """获取今日计划和复盘"""
-    today = date.today()
-
-    # 获取今日计划
-    plan = db.exec(
-        select(Plan).where(
-            Plan.trade_date == today,
-            Plan.type == "plan"
-        )
-    ).first()
-
-    # 获取今日复盘
-    review = db.exec(
-        select(Plan).where(
-            Plan.trade_date == today,
-            Plan.type == "review"
-        )
-    ).first()
-
-    return {
-        "plan": plan.model_dump() if plan else None,
-        "review": review.model_dump() if review else None
-    }
+    return DailyService.get_today()
 
 
-@router.get("/plans/{item_id}", response_model=PlanResponse)
-def get_plan(item_id: int, db: Session = Depends(get_db)):
+@router.get("/plans/{item_id}")
+def get_plan(item_id: int):
     """获取单个计划/复盘"""
-    plan = db.get(Plan, item_id)
-    if not plan:
+    result = DailyService.get_with_related(item_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Not found")
-
-    result = plan.model_dump()
-    if plan.related_id:
-        related = db.get(Plan, plan.related_id)
-        if related:
-            result['related_plan'] = {
-                'id': related.id,
-                'type': related.type,
-                'content': related.content,
-                'trade_date': related.trade_date
-            }
-
     return result
 
 
-@router.post("/plans", response_model=PlanResponse)
-def create_plan(item: PlanCreate, db: Session = Depends(get_db)):
+@router.post("/plans")
+def create_plan(
+    type: str = "plan",
+    trade_date: date = Query(...),
+    content: str = "",
+    template: Optional[str] = None,
+    tags: Optional[str] = None,
+    related_id: Optional[int] = None,
+    stock_count: int = 0,
+    execution_rate: float = 0.0,
+    pnl: float = 0.0,
+):
     """创建计划或复盘"""
-    db_item = Plan(
-        type=item.type,
-        trade_date=item.trade_date,
-        content=item.content,
-        template=item.template,
-        tags=item.tags,
-        related_id=item.related_id,
-        stock_count=item.stock_count or 0,
-        execution_rate=item.execution_rate or 0.0,
-        pnl=item.pnl or 0.0,
+    return DailyService.create(
+        type=type,
+        trade_date=trade_date,
+        content=content,
+        template=template,
+        tags=tags,
+        related_id=related_id,
+        stock_count=stock_count,
+        execution_rate=execution_rate,
+        pnl=pnl,
     )
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return db_item
 
 
-@router.put("/plans/{item_id}", response_model=PlanResponse)
-def update_plan(item_id: int, item: PlanUpdate, db: Session = Depends(get_db)):
+@router.put("/plans/{item_id}")
+def update_plan(item_id: int, **kwargs):
     """更新计划或复盘"""
-    db_item = db.get(Plan, item_id)
-    if not db_item:
+    plan = DailyService.update(item_id, **kwargs)
+    if not plan:
         raise HTTPException(status_code=404, detail="Not found")
-
-    item_data = item.model_dump(exclude_unset=True)
-    for key, value in item_data.items():
-        setattr(db_item, key, value)
-
-    db_item.updated_at = date.today()
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
-    return db_item
+    return plan
 
 
 @router.delete("/plans/{item_id}")
-def delete_plan(item_id: int, db: Session = Depends(get_db)):
+def delete_plan(item_id: int):
     """删除计划或复盘"""
-    item = db.get(Plan, item_id)
-    if not item:
+    success = DailyService.delete(item_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Not found")
-    db.delete(item)
-    db.commit()
     return {"ok": True}
 
 
 @router.post("/plans/{item_id}/review")
-def create_review_from_plan(item_id: int, content: str, db: Session = Depends(get_db)):
+def create_review_from_plan(item_id: int, content: str):
     """基于计划创建复盘"""
-    plan = db.get(Plan, item_id)
-    if not plan:
+    review = DailyService.create_review_from_plan(item_id, content)
+    if not review:
         raise HTTPException(status_code=404, detail="Plan not found")
-
-    review = Plan(
-        type="review",
-        trade_date=plan.trade_date,
-        content=content,
-        related_id=plan.id,
-        template=plan.template,
-    )
-    db.add(review)
-    db.commit()
-    db.refresh(review)
     return review

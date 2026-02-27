@@ -1,152 +1,126 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+"""
+回测 API
+"""
+import json
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List, Dict, Any
 from datetime import date, timedelta
-from pydantic import BaseModel
+from sqlmodel import Session, select
 
-from app.database import get_db
+from app.database import engine
 from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine as BacktestEngine
-
+from app.models.backtest_strategy import BacktestStrategy
+from app.models.external_data import ExternalStockBasic
+from app.services.data_service import DataService
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
 
-class BacktestRequest(BaseModel):
-    stock_code: str
-    start_date: str
-    end_date: str
-    initial_capital: float = 100000
-    strategy_type: str = "ma_cross"
-    # 自定义策略ID (当使用自定义策略时)
-    strategy_id: Optional[int] = None
-    # 自定义策略参数 (当使用自定义策略时)
-    strategy_params: Optional[Dict[str, Any]] = None
-    fast_period: Optional[int] = 10
-    slow_period: Optional[int] = 20
-    rsi_period: Optional[int] = 14
-    rsi_upper: Optional[int] = 70
-    rsi_lower: Optional[int] = 30
-    macd_fast: Optional[int] = 12
-    macd_slow: Optional[int] = 26
-    macd_signal: Optional[int] = 9
-    bb_period: Optional[int] = 20
-    bb_std: Optional[float] = 2.0
-
-
-class BacktestResult(BaseModel):
-    initial_capital: float
-    final_value: float
-    total_return: float
-    annual_return: float
-    sharpe_ratio: float
-    max_drawdown: float
-    win_rate: float
-    total_trades: int
-    best_trade: float
-    worst_trade: float
-    avg_trade: float
-
-
-@router.post("/run", response_model=BacktestResult)
+@router.post("/run")
 def run_backtest(
-    request: BacktestRequest,
-    db: Session = Depends(get_db)
+    stock_code: str = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    initial_capital: float = 100000,
+    strategy_type: str = "ma_cross",
+    strategy_id: Optional[int] = None,
+    strategy_params: Optional[str] = None,
+    fast_period: int = 10,
+    slow_period: int = 20,
+    rsi_period: int = 14,
+    rsi_upper: int = 70,
+    rsi_lower: int = 30,
+    macd_fast: int = 12,
+    macd_slow: int = 26,
+    macd_signal: int = 9,
+    bb_period: int = 20,
+    bb_std: float = 2.0,
 ):
     """运行回测"""
-    engine = BacktestEngine(request.initial_capital)
+    engine = BacktestEngine(initial_capital)
 
     df = engine.get_kline_dataframe(
-        db,
-        request.stock_code,
-        request.start_date,
-        request.end_date
+        stock_code,
+        start_date,
+        end_date
     )
 
-    if df.empty or len(df) < 10:
+    if df is None or df.empty or len(df) < 10:
         raise HTTPException(
             status_code=404,
-            detail=f"未找到股票 {request.stock_code} 的足够K线数据。请先通过数据同步功能获取K线数据，或检查网络连接后重试。"
+            detail=f"未找到股票 {stock_code} 的足够K线数据。请先通过数据同步功能获取K线数据，或检查网络连接后重试。"
         )
 
+    # 解析 strategy_params
+    params = None
+    if strategy_params:
+        try:
+            params = json.loads(strategy_params)
+        except:
+            pass
+
     # 检查是否是自定义策略
-    if request.strategy_id:
+    if strategy_id:
         # 从数据库获取自定义策略
-        from app.models.backtest_strategy import BacktestStrategy
+        with Session(engine) as session:
+            strategy = session.get(BacktestStrategy, strategy_id)
+            if not strategy:
+                raise HTTPException(status_code=404, detail="策略不存在")
 
-        strategy = db.get(BacktestStrategy, request.strategy_id)
-        if not strategy:
-            raise HTTPException(status_code=404, detail="策略不存在")
+            if not strategy.is_active:
+                raise HTTPException(status_code=400, detail="策略已停用")
 
-        if not strategy.is_active:
-            raise HTTPException(status_code=400, detail="策略已停用")
+            # 获取参数
+            final_params = params or {}
+            if not final_params and strategy.params_definition:
+                try:
+                    param_defs = json.loads(strategy.params_definition)
+                    for param in param_defs:
+                        param_name = param.get("name")
+                        if param_name and param.get("default") is not None:
+                            final_params[param_name] = param.get("default")
+                except:
+                    pass
 
-        # 获取参数
-        params = request.strategy_params or {}
-        if not params and strategy.params_definition:
-            # 从请求中提取参数
-            for param in strategy.params_definition:
-                param_name = param.get("name")
-                if param_name:
-                    # 尝试从请求中获取参数值
-                    req_dict = request.model_dump()
-                    if param_name in req_dict:
-                        params[param_name] = req_dict[param_name]
-                    elif param.get("default") is not None:
-                        params[param_name] = param.get("default")
-
-        result = engine.run_custom_strategy(df, strategy.code, params)
-        return BacktestResult(**result)
+            result = engine.run_custom_strategy(df, strategy.code, final_params)
+            return result
 
     # 内置策略
     strategy_map = {
-        "ma_cross": lambda: engine.run_ma_cross(
-            df, request.fast_period or 10, request.slow_period or 20
-        ),
-        "rsi": lambda: engine.run_rsi(
-            df, request.rsi_period or 14, request.rsi_upper or 70, request.rsi_lower or 30
-        ),
-        "macd": lambda: engine.run_macd(
-            df, request.macd_fast or 12, request.macd_slow or 26, request.macd_signal or 9
-        ),
-        "bollinger": lambda: engine.run_bollinger(
-            df, request.bb_period or 20, request.bb_std or 2.0
-        ),
+        "ma_cross": lambda: engine.run_ma_cross(df, fast_period or 10, slow_period or 20),
+        "rsi": lambda: engine.run_rsi(df, rsi_period or 14, rsi_upper or 70, rsi_lower or 30),
+        "macd": lambda: engine.run_macd(df, macd_fast or 12, macd_slow or 26, macd_signal or 9),
+        "bollinger": lambda: engine.run_bollinger(df, bb_period or 20, bb_std or 2.0),
     }
 
-    strategy_func = strategy_map.get(request.strategy_type)
+    strategy_func = strategy_map.get(strategy_type)
     if not strategy_func:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的策略类型: {request.strategy_type}"
+            detail=f"不支持的策略类型: {strategy_type}"
         )
 
-    result = strategy_func()
-    return BacktestResult(**result)
+    return strategy_func()
 
 
 @router.get("/stocks")
-def get_backtest_stocks(
-    db: Session = Depends(get_db),
-    limit: int = 50
-):
+def get_backtest_stocks(limit: int = 50):
     """获取可回测的股票列表"""
-    from app.models.external_data import ExternalStockBasic
-    from sqlmodel import select
+    with Session(engine) as session:
+        stocks = session.exec(
+            select(ExternalStockBasic).where(
+                ExternalStockBasic.list_status == "L"
+            ).limit(limit)
+        ).all()
 
-    stocks = db.exec(
-        select(ExternalStockBasic).where(
-            ExternalStockBasic.list_status == "L"
-        ).limit(limit)
-    ).all()
-
-    return [
-        {
-            "code": s.code,
-            "name": s.name,
-            "market": s.market,
-        }
-        for s in stocks
-    ]
+        return [
+            {
+                "code": s.code,
+                "name": s.name,
+                "market": s.market,
+            }
+            for s in stocks
+        ]
 
 
 @router.get("/klines/{stock_code}")
@@ -157,8 +131,6 @@ def get_backtest_klines(
     limit: int = 500
 ):
     """获取回测用K线数据"""
-    from app.services.data_service import DataService
-
     if not start_date:
         start_date = (date.today() - timedelta(days=365)).strftime("%Y-%m-%d")
     if not end_date:
@@ -173,12 +145,10 @@ def get_backtest_klines(
 
 
 @router.get("/strategies")
-def get_available_strategies(
-    db: Session = Depends(get_db)
-):
+def get_available_strategies():
     """获取可用的策略列表 (包括内置和自定义)"""
 
-    # 内置策略 (兼容旧格式)
+    # 内置策略
     builtin_strategies = [
         {
             "id": "ma_cross",
@@ -225,28 +195,26 @@ def get_available_strategies(
     ]
 
     # 从数据库获取自定义策略
-    from app.models.backtest_strategy import BacktestStrategy
-    import json as json_mod
+    with Session(engine) as session:
+        custom_strategies = session.exec(
+            select(BacktestStrategy).where(BacktestStrategy.is_active == True)
+        ).all()
 
-    custom_strategies = db.exec(
-        select(BacktestStrategy).where(BacktestStrategy.is_active == True)
-    ).all()
+        custom_list = []
+        for s in custom_strategies:
+            try:
+                params = json.loads(s.params_definition or "[]")
+            except:
+                params = []
 
-    custom_list = []
-    for s in custom_strategies:
-        try:
-            params = json_mod.loads(s.params_definition or "[]")
-        except:
-            params = []
-
-        custom_list.append({
-            "id": str(s.id),  # 使用字符串ID以区分内置策略
-            "name": s.name,
-            "description": s.description or "",
-            "strategy_type": s.strategy_type,
-            "params": params,
-            "is_builtin": s.is_builtin,
-        })
+            custom_list.append({
+                "id": str(s.id),
+                "name": s.name,
+                "description": s.description or "",
+                "strategy_type": s.strategy_type,
+                "params": params,
+                "is_builtin": s.is_builtin,
+            })
 
     return {
         "builtin": builtin_strategies,

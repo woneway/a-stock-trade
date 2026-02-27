@@ -1,99 +1,66 @@
-from fastapi import APIRouter, HTTPException
+"""
+增强回测 API
+"""
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
-from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine
 
+from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
 
-class BacktestRequest(BaseModel):
-    stock_code: str
-    start_date: str
-    end_date: str
-    initial_capital: float = 100000
-    strategy_type: str = "ma_cross"
-    # MA Cross params
-    fast_period: Optional[int] = 10
-    slow_period: Optional[int] = 20
-    # RSI params
-    rsi_period: Optional[int] = 14
-    rsi_upper: Optional[int] = 70
-    rsi_lower: Optional[int] = 30
-    # MACD params
-    macd_fast: Optional[int] = 12
-    macd_slow: Optional[int] = 26
-    macd_signal: Optional[int] = 9
-    # Bollinger params
-    bb_period: Optional[int] = 20
-    bb_std: Optional[float] = 2.0
-    # Stop loss/profit params
-    stop_loss_pct: Optional[float] = 10
-    stop_profit_pct: Optional[float] = 10
-
-
-class BacktestResult(BaseModel):
-    initial_capital: float
-    final_value: float
-    total_return: float
-    annual_return: float
-    sharpe_ratio: float
-    max_drawdown: float
-    win_rate: float
-    total_trades: int
-    best_trade: float
-    worst_trade: float
-    avg_trade: float
-    trades: List[Dict]
-    equity_curve: List[Dict]
-    indicators: Dict
-
-
-@router.post("/run", response_model=BacktestResult)
-def run_backtest(request: BacktestRequest):
+@router.post("/run")
+def run_backtest(
+    stock_code: str = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    initial_capital: float = 100000,
+    strategy_type: str = "ma_cross",
+    fast_period: int = 10,
+    slow_period: int = 20,
+    rsi_period: int = 14,
+    rsi_upper: int = 70,
+    rsi_lower: int = 30,
+    macd_fast: int = 12,
+    macd_slow: int = 26,
+    macd_signal: int = 9,
+    bb_period: int = 20,
+    bb_std: float = 2.0,
+    stop_loss_pct: float = 10,
+    stop_profit_pct: float = 10,
+):
     """运行增强回测 - 返回详细交易记录和指标"""
-    engine = EnhancedBacktestEngine(request.initial_capital)
+    engine = EnhancedBacktestEngine(initial_capital)
 
     df = engine.get_kline_dataframe(
-        request.stock_code,
-        request.start_date,
-        request.end_date
+        stock_code,
+        start_date,
+        end_date
     )
 
     if df is None or df.empty or len(df) < 10:
         raise HTTPException(
             status_code=404,
-            detail=f"未找到股票 {request.stock_code} 的足够K线数据 (需要至少10条)"
+            detail=f"未找到股票 {stock_code} 的足够K线数据 (需要至少10条)"
         )
 
     strategy_map = {
-        "ma_cross": lambda: engine.run_ma_cross(
-            df, request.fast_period or 10, request.slow_period or 20
-        ),
-        "rsi": lambda: engine.run_rsi(
-            df, request.rsi_period or 14, request.rsi_upper or 70, request.rsi_lower or 30
-        ),
-        "macd": lambda: engine.run_macd(
-            df, request.macd_fast or 12, request.macd_slow or 26, request.macd_signal or 9
-        ),
-        "bollinger": lambda: engine.run_bollinger(
-            df, request.bb_period or 20, request.bb_std or 2.0
-        ),
+        "ma_cross": lambda: engine.run_ma_cross(df, fast_period or 10, slow_period or 20),
+        "rsi": lambda: engine.run_rsi(df, rsi_period or 14, rsi_upper or 70, rsi_lower or 30),
+        "macd": lambda: engine.run_macd(df, macd_fast or 12, macd_slow or 26, macd_signal or 9),
+        "bollinger": lambda: engine.run_bollinger(df, bb_period or 20, bb_std or 2.0),
         "simple_trend": lambda: engine.run_simple_trend(df),
-        "stop_loss_profit": lambda: engine.run_stop_loss_profit(
-            df, request.stop_loss_pct or 10, request.stop_profit_pct or 10
-        ),
+        "stop_loss_profit": lambda: engine.run_stop_loss_profit(df, stop_loss_pct or 10, stop_profit_pct or 10),
     }
 
-    strategy_func = strategy_map.get(request.strategy_type)
+    strategy_func = strategy_map.get(strategy_type)
     if not strategy_func:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的策略类型: {request.strategy_type}"
+            detail=f"不支持的策略类型: {strategy_type}"
         )
 
-    result = strategy_func()
-    return BacktestResult(**result)
+    return strategy_func()
 
 
 @router.get("/strategies")

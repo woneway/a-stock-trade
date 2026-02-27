@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+"""
+参数优化 API
+"""
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
+
 from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine
 from app.routers.backtest.optimizer import ParameterOptimizer
-
 
 router = APIRouter(prefix="/api/optimizer", tags=["optimizer"])
 
@@ -35,52 +37,51 @@ STRATEGY_PARAM_GRIDS = {
 }
 
 
-class OptimizeRequest(BaseModel):
-    stock_code: str
-    start_date: str
-    end_date: str
-    strategy_type: str
-    initial_capital: float = 100000
-    method: str = "grid"
-    n_iter: Optional[int] = 50
-    objective: str = "sharpe_ratio"
-    param_overrides: Optional[Dict[str, List[Any]]] = None
-
-
-class OptimizeResult(BaseModel):
-    best_params: Dict[str, Any]
-    best_metrics: Dict[str, float]
-    total_combinations: int
-    objective: str
-    top_10: List[Dict[str, Any]]
-
-
-@router.post("/run", response_model=OptimizeResult)
-def run_optimization(request: OptimizeRequest):
+@router.post("/run")
+def run_optimization(
+    stock_code: str = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    strategy_type: str = Query(...),
+    initial_capital: float = 100000,
+    method: str = "grid",
+    n_iter: Optional[int] = 50,
+    objective: str = "sharpe_ratio",
+    param_overrides: Optional[str] = None,
+):
     """运行参数优化"""
-    if request.strategy_type not in STRATEGY_PARAM_GRIDS:
+    if strategy_type not in STRATEGY_PARAM_GRIDS:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的策略类型: {request.strategy_type}. 支持: {list(STRATEGY_PARAM_GRIDS.keys())}"
+            detail=f"不支持的策略类型: {strategy_type}. 支持: {list(STRATEGY_PARAM_GRIDS.keys())}"
         )
 
-    engine = EnhancedBacktestEngine(request.initial_capital)
+    # 解析 param_overrides
+    overrides = None
+    if param_overrides:
+        import json
+        try:
+            overrides = json.loads(param_overrides)
+        except:
+            pass
+
+    engine = EnhancedBacktestEngine(initial_capital)
 
     df = engine.get_kline_dataframe(
-        request.stock_code,
-        request.start_date,
-        request.end_date
+        stock_code,
+        start_date,
+        end_date
     )
 
     if df is None or df.empty or len(df) < 50:
         raise HTTPException(
             status_code=404,
-            detail=f"未找到股票 {request.stock_code} 的足够K线数据 (需要至少50条)"
+            detail=f"未找到股票 {stock_code} 的足够K线数据 (需要至少50条)"
         )
 
-    param_grid = STRATEGY_PARAM_GRIDS[request.strategy_type].copy()
-    if request.param_overrides:
-        param_grid.update(request.param_overrides)
+    param_grid = STRATEGY_PARAM_GRIDS[strategy_type].copy()
+    if overrides:
+        param_grid.update(overrides)
 
     # 映射策略类型到回测函数
     strategy_map = {
@@ -91,36 +92,36 @@ def run_optimization(request: OptimizeRequest):
         "stop_loss_profit": lambda df, **p: engine.run_stop_loss_profit(df, p.get('stop_loss_pct', 10), p.get('stop_profit_pct', 10)),
     }
 
-    backtest_func = strategy_map.get(request.strategy_type)
+    backtest_func = strategy_map.get(strategy_type)
     if not backtest_func:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的策略类型: {request.strategy_type}"
+            detail=f"不支持的策略类型: {strategy_type}"
         )
 
     optimizer = ParameterOptimizer(
         param_grid=param_grid,
-        objective=request.objective,
-        maximize=request.objective != "max_drawdown"
+        objective=objective,
+        maximize=objective != "max_drawdown"
     )
 
     optimizer.optimize(
         backtest_func=backtest_func,
         df=df,
-        method=request.method,
-        n_iter=request.n_iter or 50,
-        initial_capital=request.initial_capital
+        method=method,
+        n_iter=n_iter or 50,
+        initial_capital=initial_capital
     )
 
     summary = optimizer.summary()
 
-    return OptimizeResult(
-        best_params=summary["best_params"],
-        best_metrics=summary["best_metrics"],
-        total_combinations=summary["total_combinations"],
-        objective=summary["objective"],
-        top_10=summary["top_10"]
-    )
+    return {
+        "best_params": summary["best_params"],
+        "best_metrics": summary["best_metrics"],
+        "total_combinations": summary["total_combinations"],
+        "objective": summary["objective"],
+        "top_10": summary["top_10"]
+    }
 
 
 @router.get("/param-grids")
