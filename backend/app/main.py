@@ -9,7 +9,7 @@ from app.routers.backtest import router_enhanced
 from app.routers.backtest_strategy import router as backtest_strategy_router
 from app.routers import optimizer_enhanced
 from app.routers import data_v2, yz_data
-from app.routers import plans, positions, trades, strategies, signals, backtests, iterations
+from app.routers import positions, trades
 
 
 @asynccontextmanager
@@ -43,13 +43,8 @@ app.include_router(data_v2.router)                # 数据查询
 app.include_router(yz_data.router)                 # 游资数据(本地缓存)
 
 # 业务数据
-app.include_router(plans.router)                   # 交易计划
 app.include_router(positions.router)               # 持仓管理
 app.include_router(trades.router)                  # 成交记录
-app.include_router(strategies.router)              # 策略管理
-app.include_router(signals.router)                 # 策略信号
-app.include_router(backtests.router)               # 回测结果
-app.include_router(iterations.router)             # 策略迭代
 
 
 @app.get("/health")

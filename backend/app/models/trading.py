@@ -1,82 +1,14 @@
 """
-业务数据库模型 - 交易管理系统
-包含：交易计划、复盘记录、持仓、委托、成交、策略、信号、回测结果、策略迭代
+业务数据库模型 - 交易相关核心模型
+只保留必要的模型，避免与现有模型重复：
+- Plan (daily.py): 计划和复盘模板
+- BacktestStrategy (backtest_strategy.py): 回测策略
+
+本文件只包含：持仓、委托、成交、策略信号
 """
 from datetime import date, datetime
-from sqlmodel import Field, SQLModel, Relationship
-from typing import Optional, List
-
-
-# ==================== 交易计划 ====================
-
-class TradingPlan(SQLModel, table=True):
-    """交易计划模型 - 存储用户的股票交易计划"""
-    __tablename__ = "trading_plans"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # 股票信息
-    stock_code: str = Field(index=True, description="股票代码")
-    stock_name: Optional[str] = Field(default=None, description="股票名称")
-
-    # 计划信息
-    plan_date: date = Field(description="计划日期")
-    target_price: Optional[float] = Field(default=None, description="计划买入价")
-    quantity: Optional[int] = Field(default=None, description="计划数量")
-
-    # 策略与模式
-    strategy_type: str = Field(default="custom", alias="strategyType", description="策略类型")
-    trade_mode: Optional[str] = Field(default=None, alias="tradeMode", description="交易模式")
-
-    # 止盈止损
-    stop_loss: Optional[float] = Field(default=None, description="止损价")
-    take_profit_1: Optional[float] = Field(default=None, alias="takeProfit1", description="止盈位1")
-    take_profit_2: Optional[float] = Field(default=None, alias="takeProfit2", description="止盈位2")
-
-    # 验证条件与理由
-    validation_conditions: Optional[str] = Field(default=None, alias="validationConditions", description="验证条件")
-    reason: Optional[str] = Field(default=None, description="买入理由")
-
-    # 状态与备注
-    status: str = Field(default="draft", description="状态: draft/executed/abandoned/expired")
-    notes: Optional[str] = Field(default=None, description="备注")
-
-    # 时间戳
-    created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
-    updated_at: datetime = Field(default_factory=datetime.now, alias="updatedAt")
-
-    class Config:
-        populate_by_name = True
-
-
-# ==================== 交易复盘 ====================
-
-class TradingReview(SQLModel, table=True):
-    """交易复盘模型 - 存储用户的交易复盘记录"""
-    __tablename__ = "trading_reviews"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # 股票信息
-    stock_code: str = Field(index=True, description="股票代码")
-    stock_name: Optional[str] = Field(default=None, description="股票名称")
-    trade_date: date = Field(index=True, description="交易日期")
-
-    # 复盘内容
-    review_content: Optional[str] = Field(default=None, alias="reviewContent", description="复盘内容")
-    summary: Optional[str] = Field(default=None, description="总结")
-    mistakes: Optional[str] = Field(default=None, description="错误记录")
-    lessons: Optional[str] = Field(default=None, description="经验教训")
-
-    # 关联
-    plan_id: Optional[int] = Field(default=None, alias="planId", foreign_key="trading_plans.id", description="关联计划ID")
-
-    # 时间戳
-    created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
-    updated_at: datetime = Field(default_factory=datetime.now, alias="updatedAt")
-
-    class Config:
-        populate_by_name = True
+from sqlmodel import Field, SQLModel
+from typing import Optional
 
 
 # ==================== 持仓 ====================
@@ -111,6 +43,9 @@ class Position(SQLModel, table=True):
 
     # 开仓日期
     opened_at: date = Field(alias="openedAt", description="开仓日期")
+
+    # 关联计划（可选，关联 daily.Plan）
+    plan_id: Optional[int] = Field(default=None, description="关联计划ID")
 
     # 时间戳
     created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
@@ -147,6 +82,10 @@ class Order(SQLModel, table=True):
     # 成交信息
     filled_quantity: int = Field(default=0, alias="filledQuantity", description="成交数量")
     filled_price: Optional[float] = Field(default=None, alias="filledPrice", description="成交价")
+
+    # 关联
+    plan_id: Optional[int] = Field(default=None, description="关联计划ID")
+    position_id: Optional[int] = Field(default=None, alias="positionId", foreign_key="positions.id", description="关联持仓ID")
 
     # 备注
     notes: Optional[str] = Field(default=None, description="备注")
@@ -185,6 +124,7 @@ class Trade(SQLModel, table=True):
     # 关联
     order_id: Optional[int] = Field(default=None, alias="orderId", foreign_key="orders.id", description="关联委托ID")
     position_id: Optional[int] = Field(default=None, alias="positionId", foreign_key="positions.id", description="关联持仓ID")
+    plan_id: Optional[int] = Field(default=None, description="关联计划ID")
 
     # 盈亏
     pnl: Optional[float] = Field(default=None, description="盈亏")
@@ -200,39 +140,6 @@ class Trade(SQLModel, table=True):
         populate_by_name = True
 
 
-# ==================== 策略定义 ====================
-
-class Strategy(SQLModel, table=True):
-    """策略模型 - 存储用户的策略定义"""
-    __tablename__ = "strategies"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # 基本信息
-    name: str = Field(unique=True, index=True, description="策略名称")
-    description: Optional[str] = Field(default=None, description="策略描述")
-
-    # 策略类型
-    strategy_type: str = Field(default="custom", alias="strategyType", description="策略类型: custom/builtin")
-
-    # 策略代码
-    code: Optional[str] = Field(default=None, description="策略代码")
-
-    # 参数定义
-    params_definition: str = Field(default="[]", alias="paramsDefinition", description="参数定义JSON")
-
-    # 状态
-    is_builtin: bool = Field(default=False, alias="isBuiltin", description="是否内置")
-    is_active: bool = Field(default=True, alias="isActive", description="是否启用")
-
-    # 时间戳
-    created_at: date = Field(default_factory=date.today, alias="createdAt")
-    updated_at: date = Field(default_factory=date.today, alias="updatedAt")
-
-    class Config:
-        populate_by_name = True
-
-
 # ==================== 策略信号 ====================
 
 class StrategySignal(SQLModel, table=True):
@@ -241,8 +148,8 @@ class StrategySignal(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    # 关联策略
-    strategy_id: int = Field(foreign_key="strategies.id", index=True, alias="strategyId")
+    # 关联策略（使用 backtest_strategy 表）
+    strategy_id: int = Field(foreign_key="backtest_strategies.id", index=True, alias="strategyId")
 
     # 股票信息
     stock_code: str = Field(index=True, alias="stockCode", description="股票代码")
@@ -260,76 +167,10 @@ class StrategySignal(SQLModel, table=True):
     # 原因
     reason: Optional[str] = Field(default=None, description="信号原因")
 
+    # 关联计划
+    plan_id: Optional[int] = Field(default=None, description="关联计划ID")
+
     # 时间
-    created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
-
-    class Config:
-        populate_by_name = True
-
-
-# ==================== 回测结果 ====================
-
-class BacktestResult(SQLModel, table=True):
-    """回测结果模型 - 存储策略回测结果"""
-    __tablename__ = "backtest_results"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # 关联策略
-    strategy_id: int = Field(foreign_key="strategies.id", index=True, alias="strategyId")
-
-    # 回测区间
-    start_date: date = Field(alias="startDate", description="回测开始日期")
-    end_date: date = Field(alias="endDate", description="回测结束日期")
-
-    # 资金
-    initial_capital: float = Field(alias="initialCapital", description="初始资金")
-    final_capital: float = Field(alias="finalCapital", description="最终资金")
-
-    # 收益率指标
-    total_return: float = Field(default=0, alias="totalReturn", description="总收益率")
-    annual_return: float = Field(default=0, alias="annualReturn", description="年化收益率")
-    sharpe_ratio: float = Field(default=0, alias="sharpeRatio", description="夏普比率")
-    max_drawdown: float = Field(default=0, alias="maxDrawdown", description="最大回撤")
-
-    # 交易统计
-    win_rate: float = Field(default=0, alias="winRate", description="胜率")
-    total_trades: int = Field(default=0, alias="totalTrades", description="总交易次数")
-    profit_trades: int = Field(default=0, alias="profitTrades", description="盈利次数")
-    loss_trades: int = Field(default=0, alias="lossTrades", description="亏损次数")
-    avg_profit: float = Field(default=0, alias="avgProfit", description="平均盈利")
-    avg_loss: float = Field(default=0, alias="avgLoss", description="平均亏损")
-
-    # 时间戳
-    created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
-
-    class Config:
-        populate_by_name = True
-
-
-# ==================== 策略迭代 ====================
-
-class StrategyIteration(SQLModel, table=True):
-    """策略迭代模型 - 存储策略的历史迭代"""
-    __tablename__ = "strategy_iterations"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    # 关联策略
-    strategy_id: int = Field(foreign_key="strategies.id", index=True, alias="strategyId")
-
-    # 迭代信息
-    version: int = Field(description="迭代版本")
-    changes: Optional[str] = Field(default=None, description="修改内容")
-    test_result: Optional[str] = Field(default=None, alias="testResult", description="测试结果")
-
-    # 关联回测
-    backtest_result_id: Optional[int] = Field(default=None, alias="backtestResultId", foreign_key="backtest_results.id")
-
-    # 备注
-    notes: Optional[str] = Field(default=None, description="备注")
-
-    # 时间戳
     created_at: datetime = Field(default_factory=datetime.now, alias="createdAt")
 
     class Config:
