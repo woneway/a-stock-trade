@@ -33,6 +33,7 @@ export default function DataQuery() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [apiCategories, setApiCategories] = useState<Record<string, Array<{name: string, description: string}>> | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('游资常用');
 
   // 从API加载分类
   useEffect(() => {
@@ -429,21 +430,56 @@ export default function DataQuery() {
     }));
   }, [apiCategories]);
 
-  // 优先使用API分类，否则使用硬编码
-  const effectiveCategories = apiCategoriesFormatted || categories;
+  // 游资常用分类 - 置顶
+  const yzFavoriteCategory = {
+    name: '游资常用',
+    icon: '🔥',
+    items: [
+      { name: 'stock_zh_a_spot_em', desc: 'A股实时行情' },
+      { name: 'stock_zh_a_limit_up_em', desc: '涨停板' },
+      { name: 'stock_zt_pool_em', desc: '涨停板池' },
+      { name: 'stock_zt_pool_strong_em', desc: '涨停板池-强势' },
+      { name: 'stock_zt_pool_previous_em', desc: '昨日涨停池' },
+      { name: 'stock_sector_fund_flow_rank', desc: '板块资金流向' },
+      { name: 'stock_individual_fund_flow', desc: '个股资金流向' },
+      { name: 'stock_lhb_detail_em', desc: '龙虎榜详情' },
+      { name: 'stock_lh_yyb_most', desc: '龙虎榜营业部' },
+      { name: 'stock_board_industry_name_em', desc: '行业板块' },
+      { name: 'stock_board_concept_name_em', desc: '概念板块' },
+      { name: 'stock_hsgt_em', desc: '沪深港通持股' },
+      { name: 'stock_rzrq_em', desc: '融资融券' },
+      { name: 'stock_dzjy_em', desc: '大宗交易' },
+      { name: 'stock_main_stock_holder', desc: '主要股东持股' },
+    ]
+  };
+
+  // 获取所有tab名称
+  const allTabs = useMemo(() => {
+    const cats = apiCategoriesFormatted || categories;
+    return ['游资常用', ...cats.map((c: any) => c.name)];
+  }, [apiCategories]);
+
+  // 根据activeTab获取当前分类
+  const currentCategories = useMemo(() => {
+    if (activeTab === '游资常用') {
+      return [yzFavoriteCategory];
+    }
+    const cats = apiCategoriesFormatted || categories;
+    return cats.filter((c: any) => c.name === activeTab);
+  }, [activeTab, yzFavoriteCategory, apiCategoriesFormatted, categories]);
 
   // 过滤函数
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return effectiveCategories;
+    if (!searchQuery.trim()) return currentCategories;
     const q = searchQuery.toLowerCase();
-    return effectiveCategories.map(cat => ({
+    return currentCategories.map(cat => ({
       ...cat,
       items: cat.items.filter(item =>
         item.name.toLowerCase().includes(q) ||
         item.desc.toLowerCase().includes(q)
       )
     })).filter(cat => cat.items.length > 0);
-  }, [effectiveCategories, searchQuery]);
+  }, [currentCategories, searchQuery]);
 
   useEffect(() => {
     fetchFunctionDetail(selectedFunction);
@@ -517,6 +553,19 @@ export default function DataQuery() {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
+      </div>
+
+      {/* Tab导航 */}
+      <div className="dq-tabs">
+        {allTabs.map(tab => (
+          <button
+            key={tab}
+            className={`dq-tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* 主内容区 */}
