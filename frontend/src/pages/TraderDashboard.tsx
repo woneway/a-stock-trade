@@ -55,12 +55,6 @@ interface LhbDetailData {
   上榜日?: string;
 }
 
-interface HsgtData {
-  类型?: string;
-  今日?: number;
-  今日变化?: number;
-}
-
 interface ApiError {
   message: string;
 }
@@ -100,13 +94,11 @@ export default function TraderDashboard() {
   const [limitDownStocks, setLimitDownStocks] = useState<StockData[]>([]);
   const [zgStocks, setZgStocks] = useState<StockData[]>([]);
   const [yesterdayLimitUp, setYesterdayLimitUp] = useState<StockData[]>([]);
-  const [strongStocks, setStrongStocks] = useState<StockData[]>([]);
 
   // 资金流向
   const [individualFlows, setIndividualFlows] = useState<IndividualFlowData[]>([]);
   const [conceptFlows, setConceptFlows] = useState<SectorFlowData[]>([]);
   const [industryFlows, setIndustryFlows] = useState<SectorFlowData[]>([]);
-  const [hsgtFlows, setHsgtFlows] = useState<HsgtData[]>([]);
 
   // 龙虎榜
   const [lhbYybs, setLhbYybs] = useState<LhbYybData[]>([]);
@@ -126,27 +118,25 @@ export default function TraderDashboard() {
 
     try {
       // 1. 获取交易状态
-      const statusRes = await axios.get('/api/data/trade-status', { headers });
+      const statusRes = await axios.get('/api/yz/trade-status', { headers });
       setTradeStatus(statusRes.data);
 
-      // 2. 并行请求核心游资数据 (10个接口)
+      // 2. 并行请求核心游资数据
       const results = await Promise.allSettled([
-        // 涨跌停 (5个)
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_zt_pool_em', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_zh_a_limit_down_em', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_zt_pool_zbgc_em', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_zt_pool_previous_em', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_zt_pool_strong_em', params: {} }, { headers }),
+        // 涨跌停 (4个)
+        axios.get('/api/yz/zt-pool', { headers }),
+        axios.get('/api/yz/zt-pool-dtgc', { headers }),
+        axios.get('/api/yz/zt-pool-zbgc', { headers }),
+        axios.get('/api/yz/zt-pool-yesterday', { headers }),
 
-        // 资金流向 (4个)
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_individual_fund_flow', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_fund_flow_concept', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_fund_flow_industry', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_hsgt_fund_flow_summary_em', params: {} }, { headers }),
+        // 资金流向 (3个)
+        axios.get('/api/yz/fund-flow/individual?indicator=今日', { headers }),
+        axios.get('/api/yz/fund-flow/sector?indicator=今日&sector_type=概念资金流', { headers }),
+        axios.get('/api/yz/fund-flow/sector?indicator=今日&sector_type=行业资金流', { headers }),
 
         // 龙虎榜 (2个)
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_lh_yyb_most', params: {} }, { headers }),
-        axios.post('/api/data/akshare/execute', { func_name: 'stock_lhb_detail_em', params: {} }, { headers }),
+        axios.get('/api/yz/lhb/yybph?symbol=近一月', { headers }),
+        axios.get('/api/yz/lhb/detail', { headers }),
       ]);
 
       // 处理涨跌停
@@ -177,46 +167,38 @@ export default function TraderDashboard() {
         setYesterdayLimitUp(results[3].value.data.data.slice(0, 15));
       }
 
-      if (results[4].status === 'fulfilled' && results[4].value.data?.data) {
-        setStrongStocks(results[4].value.data.data.slice(0, 15));
-      }
-
       // 处理资金流向
-      if (results[5].status === 'fulfilled' && results[5].value.data?.data) {
-        const data = results[5].value.data.data;
+      if (results[4].status === 'fulfilled' && results[4].value.data?.data) {
+        const data = results[4].value.data.data;
         const sorted = [...data].sort((a: any, b: any) => {
           return (b['主力净流入-净额'] || 0) - (a['主力净流入-净额'] || 0);
         }).slice(0, 15);
         setIndividualFlows(sorted);
       }
 
-      if (results[6].status === 'fulfilled' && results[6].value.data?.data) {
-        const data = results[6].value.data.data;
+      if (results[5].status === 'fulfilled' && results[5].value.data?.data) {
+        const data = results[5].value.data.data;
         const sorted = [...data].sort((a: any, b: any) => {
           return (b['主力净流入'] || b['主力净流入-净额'] || 0) - (a['主力净流入'] || a['主力净流入-净额'] || 0);
         }).slice(0, 15);
         setConceptFlows(sorted);
       }
 
-      if (results[7].status === 'fulfilled' && results[7].value.data?.data) {
-        const data = results[7].value.data.data;
+      if (results[6].status === 'fulfilled' && results[6].value.data?.data) {
+        const data = results[6].value.data.data;
         const sorted = [...data].sort((a: any, b: any) => {
           return (b['涨跌幅'] || 0) - (a['涨跌幅'] || 0);
         }).slice(0, 15);
         setIndustryFlows(sorted);
       }
 
-      if (results[8].status === 'fulfilled' && results[8].value.data?.data) {
-        setHsgtFlows(results[8].value.data.data.slice(0, 5));
-      }
-
       // 处理龙虎榜
-      if (results[9].status === 'fulfilled' && results[9].value.data?.data) {
-        setLhbYybs(results[9].value.data.data.slice(0, 10));
+      if (results[7].status === 'fulfilled' && results[7].value.data?.data) {
+        setLhbYybs(results[7].value.data.data.slice(0, 10));
       }
 
-      if (results[10].status === 'fulfilled' && results[10].value.data?.data) {
-        setLhbDetails(results[10].value.data.data.slice(0, 10));
+      if (results[8].status === 'fulfilled' && results[8].value.data?.data) {
+        setLhbDetails(results[8].value.data.data.slice(0, 10));
       }
 
       // 设置统计
@@ -376,13 +358,13 @@ export default function TraderDashboard() {
           </div>
 
           <div className="data-card">
-            <h3>强势涨停 ({strongStocks.length})</h3>
-            {strongStocks.length > 0 ? (
+            <h3>昨日涨停 ({yesterdayLimitUp.length})</h3>
+            {yesterdayLimitUp.length > 0 ? (
               <div className="table-container">
                 <table className="data-table">
                   <thead><tr><th>代码</th><th>名称</th><th>涨跌幅</th></tr></thead>
                   <tbody>
-                    {strongStocks.map((s, i) => (
+                    {yesterdayLimitUp.slice(0, 10).map((s, i) => (
                       <tr key={i}>
                         <td>{getFieldValue(s, '代码', 'code')}</td>
                         <td className="stock-name">{getFieldValue(s, '名称', 'name')}</td>
@@ -447,20 +429,18 @@ export default function TraderDashboard() {
           </div>
 
           <div className="data-card">
-            <h3>沪深港通 ({hsgtFlows.length})</h3>
-            {hsgtFlows.length > 0 ? (
+            <h3>个股资金 ({individualFlows.length})</h3>
+            {individualFlows.length > 0 ? (
               <div className="table-container">
                 <table className="data-table">
-                  <thead><tr><th>类型</th><th>今日</th><th>变化</th></tr></thead>
+                  <thead><tr><th>代码</th><th>名称</th><th>主力净流入</th></tr></thead>
                   <tbody>
-                    {hsgtFlows.map((s: any, i) => (
+                    {individualFlows.slice(0, 10).map((s: any, i) => (
                       <tr key={i}>
-                        <td className="stock-name">{s['类型'] || '-'}</td>
-                        <td className={parseFloat(s['今日']||0) >= 0 ? 'money-in' : 'money-out'}>
-                          {formatMoney(s['今日'])}
-                        </td>
-                        <td className={parseFloat(s['今日变化']||0) >= 0 ? 'price-up' : 'price-down'}>
-                          {formatNumber(s['今日变化'])}%
+                        <td>{s['代码'] || '-'}</td>
+                        <td className="stock-name">{s['名称'] || '-'}</td>
+                        <td className={parseFloat(s['主力净流入-净额']||0) >= 0 ? 'money-in' : 'money-out'}>
+                          {formatMoney(s['主力净流入-净额'])}
                         </td>
                       </tr>
                     ))}
@@ -469,33 +449,6 @@ export default function TraderDashboard() {
               </div>
             ) : <div className="empty-data">暂无</div>}
           </div>
-        </div>
-
-        {/* 个股资金 */}
-        <div className="data-card" style={{ marginTop: 16 }}>
-          <h3>个股资金流向 TOP15</h3>
-          {individualFlows.length > 0 ? (
-            <div className="table-container">
-              <table className="data-table">
-                <thead><tr><th>日期</th><th>代码</th><th>名称</th><th>涨跌幅</th><th>主力净流入</th></tr></thead>
-                <tbody>
-                  {individualFlows.map((s: any, i) => (
-                    <tr key={i}>
-                      <td>{s['日期'] || '-'}</td>
-                      <td>{s['代码'] || '-'}</td>
-                      <td className="stock-name">{s['名称'] || '-'}</td>
-                      <td className={parseFloat(s['涨跌幅']||0) >= 0 ? 'price-up' : 'price-down'}>
-                        {formatNumber(s['涨跌幅'])}%
-                      </td>
-                      <td className={parseFloat(s['主力净流入-净额']||0) >= 0 ? 'money-in' : 'money-out'}>
-                        {formatMoney(s['主力净流入-净额'])}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <div className="empty-data">暂无</div>}
         </div>
       </section>
 
@@ -542,31 +495,6 @@ export default function TraderDashboard() {
               </div>
             ) : <div className="empty-data">暂无</div>}
           </div>
-        </div>
-      </section>
-
-      {/* 昨日涨停 */}
-      <section className="dashboard-section">
-        <h2>📋 昨日涨停</h2>
-        <div className="data-card">
-          <h3>昨日涨停 ({yesterdayLimitUp.length})</h3>
-          {yesterdayLimitUp.length > 0 ? (
-            <div className="table-container">
-              <table className="data-table">
-                <thead><tr><th>代码</th><th>名称</th><th>涨跌幅</th><th>涨停原因</th></tr></thead>
-                <tbody>
-                  {yesterdayLimitUp.slice(0, 15).map((s, i) => (
-                    <tr key={i}>
-                      <td>{getFieldValue(s, '代码', 'code')}</td>
-                      <td className="stock-name">{getFieldValue(s, '名称', 'name')}</td>
-                      <td className="price-up">+{formatNumber(getFieldValue(s, '涨跌幅', 'change_pct'))}%</td>
-                      <td className="reason">{getFieldValue(s, '涨停原因', 'reason') || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <div className="empty-data">暂无</div>}
         </div>
       </section>
     </div>

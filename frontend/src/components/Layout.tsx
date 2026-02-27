@@ -21,8 +21,8 @@ const menuItems: MenuItem[] = [
   // 策略分析
   { path: '/strategy-analysis', label: '策略分析', icon: '📈' },
 
-  // 数据查询
-  { path: '/data-query', label: '数据查询', icon: '🔍' },
+  // 接口调试
+  { path: '/data-query', label: '接口调试', icon: '🔧' },
 
   // 设置
   { path: '/settings', label: '设置', icon: '⚙️' },

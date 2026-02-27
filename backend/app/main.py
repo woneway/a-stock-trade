@@ -5,12 +5,11 @@ from contextlib import asynccontextmanager
 from app.database import create_db_and_tables
 from app.config import settings
 from app.routers import daily
-from app.routers.backtest import router as backtest_router
-from app.routers.backtest import router_enhanced
 from app.routers.backtest_strategy import router as backtest_strategy_router
 from app.routers import optimizer_enhanced
 from app.routers import positions, trades
 from app.routers import akshare
+from app.routers import yz_board
 
 
 @asynccontextmanager
@@ -68,11 +67,10 @@ app.add_middleware(
 
 # 核心功能
 app.include_router(daily.router)                    # 计划与复盘
-app.include_router(backtest_router)               # 回测API
-app.include_router(router_enhanced.router)         # 增强回测
 app.include_router(backtest_strategy_router)       # 自定义策略
 app.include_router(optimizer_enhanced.router)       # 参数优化
-app.include_router(akshare.router)             # AKShare测试
+app.include_router(akshare.router)                 # AKShare测试
+app.include_router(yz_board.router)                # 游资看板
 
 # 业务数据
 app.include_router(positions.router)               # 持仓管理
