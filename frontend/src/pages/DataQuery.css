@@ -1,114 +1,178 @@
 /* 数据查询页面样式 */
 .dq-container {
   min-height: 100vh;
-  background: #f5f6fa;
+  background: #f0f2f5;
 }
 
 .dq-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
+  padding: 16px 32px;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   color: white;
 }
 
 .dq-header h1 {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .dq-search {
   position: relative;
-  width: 320px;
+  width: 280px;
 }
 
 .dq-search .search-icon {
   position: absolute;
-  left: 14px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 16px;
+  font-size: 14px;
+  opacity: 0.6;
 }
 
 .dq-search input {
   width: 100%;
-  padding: 12px 16px 12px 44px;
+  padding: 10px 14px 10px 36px;
   border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.12);
   color: white;
-  font-size: 14px;
+  font-size: 13px;
+  transition: all 0.3s;
 }
 
 .dq-search input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .dq-search input:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
 }
 
+/* Tab导航 - 胶囊式设计 */
+.dq-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.dq-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.dq-tabs::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.dq-tab {
+  padding: 6px 14px;
+  border: none;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 16px;
+  white-space: nowrap;
+  transition: all 0.25s;
+  font-weight: 500;
+}
+
+.dq-tab:hover {
+  background: #e6f4ff;
+  color: #1890ff;
+}
+
+.dq-tab.active {
+  background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* 主内容区 */
 .dq-main {
   display: flex;
-  min-height: calc(100vh - 80px);
+  padding: 20px;
+  gap: 20px;
 }
 
 /* 左侧分类 */
 .dq-sidebar {
-  width: 320px;
+  width: 280px;
   background: white;
-  border-right: 1px solid #e8e8e8;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow-y: auto;
-  max-height: calc(100vh - 80px);
-  padding: 16px;
+  max-height: calc(100vh - 180px);
 }
 
 .dq-category {
-  margin-bottom: 16px;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dq-category:last-child {
+  border-bottom: none;
 }
 
 .dq-category-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 8px 10px;
+  font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a2e;
+  background: #fafafa;
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
 .dq-category-title .cat-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .dq-category-items {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .dq-item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 10px 12px;
-  background: transparent;
-  border: none;
+  padding: 8px 10px;
+  background: #f7f8fa;
+  border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
+  min-width: 100%;
 }
 
 .dq-item:hover {
-  background: #f5f6fa;
+  background: #e6f4ff;
+  border-color: #91d5ff;
 }
 
 .dq-item.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
 }
 
 .dq-item.active .item-name,
@@ -117,91 +181,100 @@
 }
 
 .dq-item .item-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .dq-item .item-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
+  margin-top: 2px;
 }
 
 /* 右侧内容 */
 .dq-content {
   flex: 1;
-  padding: 24px;
-  overflow-y: auto;
+  min-width: 0;
 }
 
 .dq-detail {
   background: white;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .dq-detail-header {
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .dq-detail-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
 }
 
 .dq-detail-title h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a2e;
   margin: 0;
 }
 
 .dq-doc-link {
-  padding: 4px 12px;
-  background: #f0f0f0;
+  padding: 4px 10px;
+  background: #f0f5ff;
   border-radius: 4px;
   font-size: 12px;
-  color: #666;
+  color: #1890ff;
   text-decoration: none;
+  transition: all 0.2s;
 }
 
 .dq-doc-link:hover {
-  background: #e0e0e0;
+  background: #e6f4ff;
 }
 
 .dq-detail-desc {
   font-size: 14px;
   color: #666;
-  margin: 8px 0 0;
+  margin: 10px 0 0;
 }
 
 .dq-detail-remark {
   font-size: 13px;
-  color: #888;
-  margin: 8px 0 0;
-  padding: 8px 12px;
-  background: #f9f9f9;
+  color: #fa8c16;
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  background: #fff7e6;
   border-radius: 6px;
+  border-left: 3px solid #fa8c16;
 }
 
 .dq-params {
-  margin: 24px 0;
+  margin: 20px 0;
 }
 
 .dq-params h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+  color: #1a1a2e;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dq-params-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .dq-param {
@@ -211,9 +284,11 @@
 }
 
 .dq-param label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #333;
+  display: flex;
+  align-items: center;
 }
 
 .dq-param label .required {
@@ -222,34 +297,36 @@
 }
 
 .dq-param input {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
+  transition: all 0.2s;
 }
 
 .dq-param input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .dq-param .param-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
 }
 
 .dq-query-btn {
   width: 100%;
-  padding: 14px 24px;
+  padding: 12px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  margin-top: 16px;
 }
 
 .dq-query-btn:hover:not(:disabled) {
@@ -267,29 +344,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
-  padding: 14px 18px;
+  margin-top: 14px;
+  padding: 12px 16px;
   background: #fff2f0;
   border: 1px solid #ffccc7;
   border-radius: 8px;
   color: #ff4d4f;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .dq-error button {
   background: none;
   border: none;
   color: #ff4d4f;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
+  padding: 0 4px;
 }
 
 /* 查询结果 */
 .dq-result {
-  margin-top: 24px;
+  margin-top: 20px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
 }
 
@@ -297,39 +375,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 14px 18px;
+  background: #fafafa;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .dq-result-header h3 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #1a1a2e;
   margin: 0;
 }
 
 .result-count {
-  font-size: 13px;
+  font-size: 12px;
   color: #888;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 .dq-result-table {
   overflow-x: auto;
-  max-height: 500px;
+  max-height: 400px;
   overflow-y: auto;
 }
 
 .dq-result-table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .dq-result-table th {
   position: sticky;
   top: 0;
   background: #fafafa;
-  padding: 12px 16px;
+  padding: 10px 14px;
   text-align: left;
   font-weight: 500;
   color: #666;
@@ -338,7 +420,7 @@
 }
 
 .dq-result-table td {
-  padding: 10px 16px;
+  padding: 8px 14px;
   color: #333;
   border-bottom: 1px solid #f5f5f5;
   white-space: nowrap;
@@ -349,74 +431,44 @@
 }
 
 .dq-empty {
-  padding: 60px 20px;
+  padding: 40px 20px;
   text-align: center;
   color: #999;
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .dq-sidebar {
-    width: 100%;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid #e8e8e8;
-  }
-
-  .dq-main {
-    flex-direction: column;
-  }
-
   .dq-header {
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .dq-search {
     width: 100%;
   }
-}
 
-/* Tab导航样式 */
-.dq-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 12px 32px;
-  background: white;
-  border-bottom: 1px solid #e8e8e8;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
+  .dq-tabs {
+    padding: 10px 12px;
+    gap: 4px;
+  }
 
-.dq-tabs::-webkit-scrollbar {
-  height: 4px;
-}
+  .dq-tab {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
 
-.dq-tabs::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
-  border-radius: 2px;
-}
+  .dq-main {
+    flex-direction: column;
+    padding: 12px;
+  }
 
-.dq-tab {
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: 6px;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
+  .dq-sidebar {
+    width: 100%;
+    max-height: 300px;
+  }
 
-.dq-tab:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.dq-tab.active {
-  background: #1890ff;
-  color: white;
-  font-weight: 500;
+  .dq-params-grid {
+    grid-template-columns: 1fr;
+  }
 }
