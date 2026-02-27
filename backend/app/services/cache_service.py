@@ -1239,15 +1239,25 @@ class CacheService:
                         except:
                             return None
 
+                    # 处理百分比 "45.85%"
+                    def parse_percent(val):
+                        if pd.isna(val):
+                            return None
+                        val_str = str(val)
+                        try:
+                            return float(val_str.replace('%', ''))
+                        except:
+                            return None
+
                     record = ExternalLhbYyb(
                         trade_date=trade_date,
                         broker_name=str(row.get('营业部名称', '')) if pd.notna(row.get('营业部名称')) else '',
                         up_count=get_int('上榜次数'),
-                        buy_count=get_int('买入席位数') if pd.notna(row.get('买入席位数')) else None,
-                        sell_count=get_int('卖出席位数') if pd.notna(row.get('卖出席位数')) else None,
-                        buy_amount=parse_amount(row.get('合计动用资金')),
-                        sell_amount=None,  # API doesn't provide separate sell amount
-                        net_amount=None,  # API doesn't provide net amount
+                        serial_no=get_int('序号'),
+                        total_amount=parse_amount(row.get('合计动用资金')),
+                        year_up_count=get_int('年内上榜次数'),
+                        year_stock_count=get_int('年内买入股票只数'),
+                        year_win_rate=parse_percent(row.get('年内3日跟买成功率')),
                     )
                     session.add(record)
 

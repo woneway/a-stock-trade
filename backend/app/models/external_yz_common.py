@@ -225,16 +225,15 @@ class ExternalLhbYyb(SQLModel, table=True):
 
     # 上榜统计
     up_count: Optional[int] = Field(default=None, description="上榜次数")
-    buy_count: Optional[int] = Field(default=None, description="买入次数")
-    sell_count: Optional[int] = Field(default=None, description="卖出次数")
+    serial_no: Optional[int] = Field(default=None, description="序号")
 
     # 资金统计
-    buy_amount: Optional[float] = Field(default=None, description="买入金额")
-    sell_amount: Optional[float] = Field(default=None, description="卖出金额")
-    net_amount: Optional[float] = Field(default=None, description="净买入金额")
+    total_amount: Optional[float] = Field(default=None, description="合计动用资金")
 
-    # 胜率
-    win_rate: Optional[float] = Field(default=None, description="胜率")
+    # 年内统计
+    year_up_count: Optional[int] = Field(default=None, description="年内上榜次数")
+    year_stock_count: Optional[int] = Field(default=None, description="年内买入股票只数")
+    year_win_rate: Optional[float] = Field(default=None, description="年内3日跟买成功率")
 
     class Config:
         populate_by_name = True
