@@ -2955,9 +2955,9 @@ def execute_akshare_function(request: AkshareExecuteRequest):
     # 有缓存配置且启用缓存
     if cache_config and use_cache:
         # 尝试从本地获取
-        local_data = YzDataService.query_from_local(func_name, params)
-        if local_data:
-            return {"source": "cache", "data": local_data}
+        local_result = YzDataService.query_from_local(func_name, params)
+        if local_result:
+            return {"source": "cache", **local_result}
 
         # 无缓存，调用 akshare
         result = _call_akshare(func_name, params)
@@ -2966,11 +2966,11 @@ def execute_akshare_function(request: AkshareExecuteRequest):
         if cache_config["sync"]:
             YzDataService.save_to_local(func_name, params, result)
 
-        return {"source": "akshare", "data": result}
+        return {"source": "akshare", **result}
 
     # 无缓存配置或禁用缓存，直接调用 akshare
     result = _call_akshare(func_name, params)
-    return {"source": "akshare", "data": result}
+    return {"source": "akshare", **result}
 
 
 def _call_akshare(func_name: str, params: dict):

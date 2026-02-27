@@ -59,8 +59,8 @@ class YzDataService:
     }
 
     @staticmethod
-    def query_from_local(func_name: str, params: dict) -> Optional[List[Dict]]:
-        """从本地查询数据"""
+    def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
+        """从本地查询数据，返回 {data, columns} 格式"""
         method_name = YzDataService.QUERY_METHODS.get(func_name)
         if not method_name:
             return None
@@ -73,7 +73,7 @@ class YzDataService:
         if func_name == "stock_individual_fund_flow":
             stock_code = params.get("stock")
             if stock_code:
-                return method(stock_code)
+                data = method(stock_code)
         elif func_name in ["stock_zh_a_limit_up_em", "stock_zt_pool_em"]:
             # 使用日期参数或今天
             from datetime import date
@@ -83,14 +83,22 @@ class YzDataService:
                 target_date = datetime.strptime(target_date, "%Y%m%d").date()
             else:
                 target_date = date.today()
-            return method(target_date)
+            data = method(target_date)
         elif func_name == "stock_sector_fund_flow_rank":
             indicator = params.get("indicator", "今日")
             sector_type = params.get("sector_type", "行业资金流")
-            return method(indicator, sector_type)
+            data = method(indicator, sector_type)
+        else:
+            # 默认调用无参数方法
+            data = method()
 
-        # 默认调用无参数方法
-        return method()
+        if not data:
+            return None
+
+        # 提取 columns
+        columns = list(data[0].keys()) if data else []
+
+        return {"data": data, "columns": columns}
 
     @staticmethod
     def save_to_local(func_name: str, params: dict, result: dict):
