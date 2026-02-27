@@ -1,7 +1,8 @@
-from sqlmodel import SQLModel, create_engine
+from typing import Generator
+from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
 from app.config import settings
-from app.models import daily, backtest_strategy, external_data, external_yz_common, trading  # noqa: F401
+from app.models import daily, backtest_strategy, external_data, external_yz_common, trading, data_lineage  # noqa: F401
 
 connect_args = {}
 if "sqlite" in settings.DATABASE_URL:
@@ -12,6 +13,12 @@ engine = create_engine(
     connect_args=connect_args,
     poolclass=StaticPool,
 )
+
+
+def get_db() -> Generator[Session, None]:
+    """统一的数据库会话依赖"""
+    with Session(engine) as session:
+        yield session
 
 
 def create_db_and_tables():

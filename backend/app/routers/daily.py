@@ -4,13 +4,8 @@ from typing import List, Optional
 from datetime import date, timedelta
 from pydantic import BaseModel
 
-from app.database import engine
+from app.database import get_db
 from app.models.daily import Plan
-
-
-def get_db():
-    with Session(engine) as session:
-        yield session
 
 
 router = APIRouter(prefix="/api/daily", tags=["daily"])

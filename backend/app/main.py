@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.database import create_db_and_tables
+from app.config import settings
 from app.routers import daily
 from app.routers.backtest import router as backtest_router
 from app.routers.backtest import router_enhanced
@@ -25,9 +26,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS 配置
+allowed_origins = settings.ALLOWED_ORIGINS.split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

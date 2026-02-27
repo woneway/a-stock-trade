@@ -4,13 +4,8 @@ from typing import Optional, List, Dict, Any
 from datetime import date, timedelta
 from pydantic import BaseModel
 
-from app.database import engine
+from app.database import get_db
 from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine as BacktestEngine
-
-
-def get_db():
-    with Session(engine) as session:
-        yield session
 
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])

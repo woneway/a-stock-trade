@@ -7,7 +7,7 @@ from typing import List, Optional, Any, Dict
 from datetime import date
 from pydantic import BaseModel
 
-from app.database import engine
+from app.database import get_db
 from app.models.backtest_strategy import BacktestStrategy
 from app.schemas.backtest_strategy import (
     BacktestStrategyCreate,
@@ -15,11 +15,6 @@ from app.schemas.backtest_strategy import (
     BacktestStrategyResponse,
     StrategyParam,
 )
-
-
-def get_db():
-    with Session(engine) as session:
-        yield session
 
 
 router = APIRouter(prefix="/api/backtest/strategies", tags=["backtest-strategies"])
