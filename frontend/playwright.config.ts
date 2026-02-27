@@ -12,7 +12,7 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'http://localhost:5192',
+    baseURL: 'http://localhost:5194',
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'on',
@@ -20,7 +20,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5192',
+    url: 'http://localhost:5194',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

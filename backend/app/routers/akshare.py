@@ -3,11 +3,18 @@ AKShare 通用接口测试路由
 支持动态调用 provider/akshare 中的所有函数
 """
 from typing import Any, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Body
+from pydantic import BaseModel
 
 from app.services.akshare_service import AkshareService
 
 router = APIRouter(prefix="/akshare", tags=["AKShare"])
+
+
+class AkshareCallRequest(BaseModel):
+    """AKShare 调用请求"""
+    function: str
+    params: Optional[dict] = None
 
 
 @router.get("/")
@@ -45,10 +52,7 @@ async def call_function(
 
 
 @router.post("/call")
-async def call_function_post(
-    function: str = Query(..., description="函数名称"),
-    params: Optional[dict] = Query(None, description="函数参数"),
-):
+async def call_function_post(request: AkshareCallRequest):
     """
     POST 方式调用接口
 
@@ -59,11 +63,11 @@ async def call_function_post(
     }
     """
     try:
-        result = AkshareService.call_function_with_params(function, params)
+        result = AkshareService.call_function_with_params(request.function, request.params)
         if hasattr(result, '__iter__'):
             return list(result)
         return result
     except ValueError as e:
         return {"error": str(e)}
     except Exception as e:
-        return {"error": str(e), "function": function}
+        return {"error": str(e), "function": request.function}
