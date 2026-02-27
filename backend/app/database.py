@@ -1,8 +1,10 @@
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from typing import Generator
 from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
 from app.config import settings
-from app.models import daily, backtest_strategy, trading, data_lineage  # noqa: F401
 
 connect_args = {}
 if "sqlite" in settings.DATABASE_URL:
@@ -11,7 +13,7 @@ if "sqlite" in settings.DATABASE_URL:
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args=connect_args,
-    poolclass=StaticPool,
+    poolclass=StaticPool if "sqlite" in settings.DATABASE_URL else None,
 )
 
 

@@ -12,21 +12,15 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5192',
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'on',
     channel: 'chrome',
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    url: 'http://localhost:5192',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
