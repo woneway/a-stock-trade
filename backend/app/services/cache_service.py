@@ -100,7 +100,7 @@ class CacheService:
             "model": ExternalZtPool,
             "sync": True,
             "query_type": "date",
-            "date_param": "date",
+            "date_param": "trade_date",
         },
         "stock_individual_fund_flow": {
             "model": ExternalIndividualFundFlow,
@@ -347,15 +347,85 @@ class CacheService:
             "record_count": 0,
         }
 
+    # 英文字段到中文字段的映射
+    FIELD_MAPPING = {
+        # 通用字段
+        "id": "序号",
+        "code": "代码",
+        "name": "名称",
+        "trade_date": "交易日期",
+        "date": "日期",
+        "close_price": "收盘价",
+        "open_price": "开盘价",
+        "high_price": "最高价",
+        "low_price": "最低价",
+        "change_pct": "涨跌幅",
+        "change_amount": "涨跌额",
+        "volume": "成交量",
+        "amount": "成交额",
+        "turnover_rate": "换手率",
+        "market_cap": "总市值",
+        "float_market_cap": "流通市值",
+        # 涨停板池字段
+        "reason": "涨停原因",
+        "first_time": "首次封板时间",
+        "last_time": "最后封板时间",
+        "seal_amount": "封板资金",
+        "seal_ratio": "封比",
+        "open_count": "炸板次数",
+        "latest_price": "最新价",
+        "last_price": "最新价",
+        "limit_price": "涨停价",
+        "total_amount": "成交额",
+        "up_count": "涨停统计",
+        "up_num": "连板数",
+        "industry": "所属行业",
+        "speed": "涨速",
+        "amplitude": "振幅",
+        "seal_time": "封板时间",
+        # 资金流向字段
+        "main_net_inflow": "主力净流入",
+        "main_net_inflow_rate": "主力净流入占比",
+        "super_net_inflow": "超大单净流入",
+        "big_net_inflow": "大单净流入",
+        "mid_net_inflow": "中单净流入",
+        "small_net_inflow": "小单净流入",
+        # 龙虎榜字段
+        "buy_amount": "买入金额",
+        "sell_amount": "卖出金额",
+        "net_amount": "净买额",
+        "total_amount_market": "市场总成交额",
+        "net_amount_ratio": "净买额占总成交比",
+        "deal_amount_ratio": "成交额占总成交比",
+        "float_market_cap": "流通市值",
+        "reason": "上榜原因",
+        "up_1day": "上榜后1日",
+        "up_2day": "上榜后2日",
+        "up_5day": "上榜后5日",
+        "up_10day": "上榜后10日",
+        "listing_date": "上市日期",
+        "market": "市场",
+    }
+
     @staticmethod
     def _convert_to_chinese(data: List[Dict], func_name: str) -> Dict:
-        """返回原始字段名，保持与 akshare 一致"""
+        """将数据库英文字段转换为中文字段，与 akshare 保持一致"""
         if not data:
             return {"data": data, "columns": []}
 
-        # 直接返回原始字段名，与 akshare 保持一致
-        columns = list(data[0].keys()) if data else []
-        return {"data": data, "columns": columns}
+        # 转换每条记录
+        converted_data = []
+        for record in data:
+            chinese_record = {}
+            for key, value in record.items():
+                # 使用映射表转换字段名
+                chinese_key = CacheService.FIELD_MAPPING.get(key, key)
+                chinese_record[chinese_key] = value
+            converted_data.append(chinese_record)
+
+        # 获取中文字段列表
+        columns = list(converted_data[0].keys()) if converted_data else []
+        return {"data": converted_data, "columns": columns}
 
     @staticmethod
     def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
@@ -760,10 +830,19 @@ class CacheService:
                         name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
                         close_price=get_val('收盘价'),
                         change_pct=get_val('涨跌幅'),
-                        reason=str(row.get('涨停原因', '')) if pd.notna(row.get('涨停原因')) else None,
-                        first_time=str(row.get('首次涨停时间', '')) if pd.notna(row.get('首次涨停时间')) else None,
-                        seal_amount=get_val('封单金额'),
+                        latest_price=get_val('最新价'),
+                        amount=get_val('成交额'),
+                        float_market_cap=get_val('流通市值'),
+                        market_cap=get_val('总市值'),
                         turnover_rate=get_val('换手率'),
+                        reason=str(row.get('涨停原因', '')) if pd.notna(row.get('涨停原因')) else None,
+                        seal_amount=get_val('封板资金'),
+                        first_time=str(row.get('首次封板时间', '')) if pd.notna(row.get('首次封板时间')) else None,
+                        last_time=str(row.get('最后封板时间', '')) if pd.notna(row.get('最后封板时间')) else None,
+                        open_count=int(row.get('炸板次数', 0)) if pd.notna(row.get('炸板次数')) else None,
+                        up_count=str(row.get('涨停统计', '')) if pd.notna(row.get('涨停统计')) else None,
+                        up_num=int(row.get('连板数', 0)) if pd.notna(row.get('连板数')) else None,
+                        industry=str(row.get('所属行业', '')) if pd.notna(row.get('所属行业')) else None,
                     )
                     session.add(record)
 

@@ -91,13 +91,24 @@ class ExternalZtPool(SQLModel, table=True):
     code: str = Field(index=True, description="股票代码")
     name: str = Field(description="股票名称")
 
+    # 基础字段
     close_price: Optional[float] = Field(default=None, description="收盘价")
     change_pct: Optional[float] = Field(default=None, description="涨跌幅")
-    reason: Optional[str] = Field(default=None, description="涨停原因")
-    first_time: Optional[str] = Field(default=None, description="首次涨停时间")
-
-    seal_amount: Optional[float] = Field(default=None, description="封板金额")
+    latest_price: Optional[float] = Field(default=None, description="最新价")
+    amount: Optional[float] = Field(default=None, description="成交额")
+    float_market_cap: Optional[float] = Field(default=None, description="流通市值")
+    market_cap: Optional[float] = Field(default=None, description="总市值")
     turnover_rate: Optional[float] = Field(default=None, description="换手率")
+
+    # 涨停相关字段
+    reason: Optional[str] = Field(default=None, description="涨停原因")
+    seal_amount: Optional[float] = Field(default=None, description="封板金额")
+    first_time: Optional[str] = Field(default=None, description="首次封板时间")
+    last_time: Optional[str] = Field(default=None, description="最后封板时间")
+    open_count: Optional[int] = Field(default=None, description="炸板次数")
+    up_count: Optional[str] = Field(default=None, description="涨停统计")
+    up_num: Optional[int] = Field(default=None, description="连板数")
+    industry: Optional[str] = Field(default=None, description="所属行业")
 
     class Config:
         populate_by_name = True
