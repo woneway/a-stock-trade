@@ -58,6 +58,108 @@ class YzDataService:
         "stock_lh_yyb_most": "_save_lhb_yyb_to_local",
     }
 
+    # 字段中文映射
+    COLUMN_ALIASES = {
+        "stock_lh_yyb_most": {
+            "broker_name": "营业部名称",
+            "trade_date": "交易日期",
+            "up_count": "上榜次数",
+            "buy_count": "买入次数",
+            "sell_count": "卖出次数",
+            "buy_amount": "买入金额",
+            "sell_amount": "卖出金额",
+            "net_amount": "净买入金额",
+            "win_rate": "胜率",
+        },
+        "stock_zh_a_limit_up_em": {
+            "code": "代码",
+            "name": "名称",
+            "close_price": "收盘价",
+            "change_pct": "涨跌幅",
+            "reason": "涨停原因",
+            "seal_amount": "封单金额",
+            "seal_ratio": "封比",
+            "open_count": "打开次数",
+            "first_time": "首次涨停时间",
+            "last_time": "最后涨停时间",
+            "turnover_rate": "换手率",
+            "market_cap": "总市值",
+        },
+        "stock_zt_pool_em": {
+            "code": "代码",
+            "name": "名称",
+            "close_price": "收盘价",
+            "change_pct": "涨跌幅",
+            "reason": "涨停原因",
+            "first_time": "首次涨停时间",
+            "seal_amount": "封单金额",
+            "turnover_rate": "换手率",
+        },
+        "stock_individual_fund_flow": {
+            "code": "代码",
+            "name": "名称",
+            "trade_date": "日期",
+            "net_main": "主力净流入",
+            "net_super": "超大单净流入",
+            "net_big": "大单净流入",
+            "net_mid": "中单净流入",
+            "net_small": "小单净流入",
+            "ratio_main": "主力净流入占比",
+        },
+        "stock_sector_fund_flow_rank": {
+            "sector_name": "板块名称",
+            "trade_date": "交易日期",
+            "net_inflow": "主力净流入",
+            "change_pct": "涨跌幅",
+            "turnover_rate": "换手率",
+            "amount": "成交额",
+            "rank": "排名",
+        },
+        "stock_lhb_detail_em": {
+            "code": "代码",
+            "name": "名称",
+            "trade_date": "日期",
+            "list_type": "上榜原因",
+            "buy_amount": "龙虎榜买入金额",
+            "sell_amount": "龙虎榜卖出金额",
+            "net_amount": "龙虎榜净买入额",
+        },
+        "stock_lhb_yytj_sina": {
+            "trader_name": "游资名称",
+            "trade_date": "交易日期",
+            "buy_count": "买入次数",
+            "buy_amount": "买入金额",
+            "buy_avg": "平均买入金额",
+            "sell_count": "卖出次数",
+            "sell_amount": "卖出金额",
+        },
+        "stock_zh_a_spot_em": {
+            "code": "代码",
+            "name": "名称",
+            "latest_price": "最新价",
+            "change": "涨跌额",
+            "pct_chg": "涨跌幅",
+            "volume": "成交量",
+            "amount": "成交额",
+            "amplitude": "振幅",
+            "high": "最高",
+            "low": "最低",
+            "open_price": "今开",
+            "pre_close": "昨收",
+            "volume_ratio": "量比",
+            "turnover_rate": "换手率",
+            "pe": "市盈率",
+            "pb": "市净率",
+            "market_cap": "总市值",
+            "circ_market_cap": "流通市值",
+        },
+    }
+
+    @staticmethod
+    def _get_column_aliases(func_name: str) -> Dict[str, str]:
+        """获取字段中文映射"""
+        return YzDataService.COLUMN_ALIASES.get(func_name, {})
+
     @staticmethod
     def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
         """从本地查询数据，返回 {data, columns} 格式"""
@@ -95,9 +197,22 @@ class YzDataService:
         if not data:
             return None
 
-        # 提取 columns
-        columns = list(data[0].keys()) if data else []
+        # 获取字段中文映射
+        column_aliases = YzDataService._get_column_aliases(func_name)
 
+        # 转换数据为中文列名
+        if column_aliases:
+            # 转换 columns 为中文
+            columns = [column_aliases.get(col, col) for col in data[0].keys()]
+            # 转换每条数据
+            converted_data = []
+            for row in data:
+                converted_row = {column_aliases.get(k, k): v for k, v in row.items()}
+                converted_data.append(converted_row)
+            return {"data": converted_data, "columns": columns}
+
+        # 没有映射则使用原始列名
+        columns = list(data[0].keys()) if data else []
         return {"data": data, "columns": columns}
 
     @staticmethod
