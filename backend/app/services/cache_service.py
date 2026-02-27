@@ -17,6 +17,8 @@ from app.models.external_yz_common import (
     ExternalStockSpot,
     ExternalLimitUp,
     ExternalZtPool,
+    ExternalZtPoolStrong,
+    ExternalZtPoolPrevious,
     ExternalIndividualFundFlow,
     ExternalSectorFundFlow,
     ExternalLhbDetail,
@@ -127,6 +129,19 @@ class CacheService:
             "model": ExternalBoardConcept,
             "sync": True,
             "query_type": "latest",
+        },
+        # 涨停板池相关
+        "stock_zt_pool_strong_em": {
+            "model": ExternalZtPoolStrong,
+            "sync": True,
+            "query_type": "date",
+            "date_param": "date",
+        },
+        "stock_zt_pool_previous_em": {
+            "model": ExternalZtPoolPrevious,
+            "sync": True,
+            "query_type": "date",
+            "date_param": "date",
         },
     }
 

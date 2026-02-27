@@ -286,3 +286,45 @@ class ExternalBoardConcept(SQLModel, table=True):
 
     class Config:
         populate_by_name = True
+
+
+class ExternalZtPoolStrong(SQLModel, table=True):
+    """涨停板池-强势 - stock_zt_pool_strong_em"""
+    __tablename__ = "external_zt_pool_strong"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    trade_date: date = Field(index=True, description="交易日期")
+    code: str = Field(index=True, description="股票代码")
+    name: str = Field(description="股票名称")
+
+    close_price: Optional[float] = Field(default=None, description="收盘价")
+    change_pct: Optional[float] = Field(default=None, description="涨跌幅")
+    reason: Optional[str] = Field(default=None, description="涨停原因")
+    first_time: Optional[str] = Field(default=None, description="首次涨停时间")
+
+    seal_amount: Optional[float] = Field(default=None, description="封板金额")
+    turnover_rate: Optional[float] = Field(default=None, description="换手率")
+
+    class Config:
+        populate_by_name = True
+
+
+class ExternalZtPoolPrevious(SQLModel, table=True):
+    """昨日涨停池 - stock_zt_pool_previous_em"""
+    __tablename__ = "external_zt_pool_previous"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    trade_date: date = Field(index=True, description="交易日期")
+    code: str = Field(index=True, description="股票代码")
+    name: str = Field(description="股票名称")
+
+    close_price: Optional[float] = Field(default=None, description="收盘价")
+    change_pct: Optional[float] = Field(default=None, description="涨跌幅")
+    reason: Optional[str] = Field(default=None, description="涨停原因")
+    first_time: Optional[str] = Field(default=None, description="首次涨停时间")
+
+    seal_amount: Optional[float] = Field(default=None, description="封板金额")
+    turnover_rate: Optional[float] = Field(default=None, description="换手率")
+
+    class Config:
+        populate_by_name = True
