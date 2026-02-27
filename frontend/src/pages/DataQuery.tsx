@@ -453,11 +453,24 @@ export default function DataQuery() {
     ]
   };
 
-  // 获取所有tab名称
+  // 获取所有tab名称及数量
   const allTabs = useMemo(() => {
     const cats = apiCategoriesFormatted || categories;
-    return ['游资常用', ...cats.map((c: any) => c.name)];
-  }, [apiCategories]);
+    return [
+      { name: '游资常用', count: yzFavoriteCategory.items.length },
+      ...cats.map((c: any) => ({ name: c.name, count: c.items.length }))
+    ];
+  }, [apiCategories, yzFavoriteCategory]);
+
+  // 总接口数和可用接口数
+  const totalCount = useMemo(() => {
+    const cats = apiCategoriesFormatted || categories;
+    return cats.reduce((sum: number, c: any) => sum + c.items.length, 0) + yzFavoriteCategory.items.length;
+  }, [apiCategories, yzFavoriteCategory]);
+
+  const availableCount = useMemo(() => {
+    return Object.keys(funcStatus).filter(k => funcStatus[k] === 'success').length;
+  }, [funcStatus]);
 
   // 根据activeTab获取当前分类
   const currentCategories = useMemo(() => {
@@ -557,13 +570,17 @@ export default function DataQuery() {
 
       {/* Tab导航 */}
       <div className="dq-tabs">
-        {allTabs.map(tab => (
+        <div className="dq-tabs-info">
+          <span className="dq-tabs-total">总接口: {totalCount}</span>
+          <span className="dq-tabs-available">可用: {availableCount}</span>
+        </div>
+        {allTabs.map((tab: any) => (
           <button
-            key={tab}
-            className={`dq-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            key={tab.name}
+            className={`dq-tab ${activeTab === tab.name ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.name)}
           >
-            {tab}
+            {tab.name} ({tab.count})
           </button>
         ))}
       </div>

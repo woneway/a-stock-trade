@@ -2531,7 +2531,7 @@ AKSHARE_FUNCTIONS = {
 # 分类 - 重新设计
 CATEGORIES = {
     # ==================== 一、A股行情 ====================
-    "【一】A股行情": [
+    "A股行情": [
         {"name": "stock_zh_a_spot_em", "description": "A股实时行情【游资最爱】"},
         {"name": "stock_zh_a_hist", "description": "A股历史K线"},
         {"name": "stock_zh_a_minute", "description": "A股分时数据"},
@@ -2552,7 +2552,7 @@ CATEGORIES = {
     ],
 
     # ==================== 二、港股行情 ====================
-    "【二】港股行情": [
+    "港股行情": [
         {"name": "stock_hk_spot_em", "description": "港股实时行情"},
         {"name": "stock_hk_daily", "description": "港股日K线"},
         {"name": "stock_hk_index_spot_em", "description": "港股指数行情"},
@@ -2560,13 +2560,13 @@ CATEGORIES = {
     ],
 
     # ==================== 三、美股行情 ====================
-    "【三】美股行情": [
+    "美股行情": [
         {"name": "stock_us_spot_em", "description": "美股实时行情"},
         {"name": "stock_us_daily", "description": "美股日K线"},
     ],
 
     # ==================== 四、指数数据 ====================
-    "【四】指数数据": [
+    "指数数据": [
         {"name": "stock_zh_index_spot_em", "description": "A股指数实时行情"},
         {"name": "stock_zh_index_daily", "description": "A股指数日K线"},
         {"name": "index_zh_a_hist", "description": "A股指数历史K线"},
@@ -2582,7 +2582,7 @@ CATEGORIES = {
     ],
 
     # ==================== 五、板块行情 ====================
-    "【五】板块行情": [
+    "板块行情": [
         {"name": "stock_board_industry_name_em", "description": "行业板块行情"},
         {"name": "stock_board_concept_name_em", "description": "概念板块行情"},
         {"name": "stock_board_industry_cons_em", "description": "行业板块成分股"},
@@ -2597,7 +2597,7 @@ CATEGORIES = {
     ],
 
     # ==================== 六、资金流向【核心】 ====================
-    "【六】资金流向": [
+    "资金流向": [
         {"name": "stock_individual_fund_flow", "description": "个股资金流向【游资最爱】"},
         {"name": "stock_individual_fund_flow_stick", "description": "个股资金流向(多日)"},
         {"name": "stock_fund_flow_individual", "description": "个股资金流向详细"},
@@ -2613,7 +2613,7 @@ CATEGORIES = {
     ],
 
     # ==================== 七、龙虎榜 ====================
-    "【七】龙虎榜": [
+    "龙虎榜": [
         {"name": "stock_lhb_detail_em", "description": "龙虎榜详情【游资必看】"},
         {"name": "stock_lhb_detail_daily_sina", "description": "龙虎榜每日详情(新浪)"},
         {"name": "stock_lhb_stock_statistic_em", "description": "龙虎榜股票统计"},
@@ -2632,7 +2632,7 @@ CATEGORIES = {
     ],
 
     # ==================== 八、股东数据 ====================
-    "【八】股东数据": [
+    "股东数据": [
         {"name": "stock_zh_gbqy_em", "description": "股东人数变化"},
         {"name": "stock_main_stock_holder", "description": "主要股东持股情况"},
         {"name": "stock_fund_stock_holder", "description": "基金股东持股情况"},
@@ -2641,7 +2641,7 @@ CATEGORIES = {
     ],
 
     # ==================== 九、财务报表 ====================
-    "【九】财务报表": [
+    "财务报表": [
         {"name": "stock_financial_abstract", "description": "财务摘要"},
         {"name": "stock_financial_analysis_indicator", "description": "财务分析指标"},
         {"name": "stock_financial_analysis_indicator_em", "description": "财务分析指标(同花顺)"},
@@ -2658,14 +2658,14 @@ CATEGORIES = {
     ],
 
     # ==================== 十、融资融券 ====================
-    "【十】融资融券": [
+    "融资融券": [
         {"name": "stock_rzrq_em", "description": "融资融券"},
         {"name": "stock_rzrq_detail_em", "description": "融资融券明细"},
         {"name": "stock_rzrq_latest", "description": "融资融券最新"},
     ],
 
     # ==================== 十一、大宗交易/限售股 ====================
-    "【十一】大宗交易/限售股": [
+    "大宗交易/限售股": [
         {"name": "stock_dzjy_em", "description": "大宗交易"},
         {"name": "stock_dzjy_mrmx", "description": "大宗交易明细"},
         {"name": "stock_dzjy_mrtj", "description": "大宗交易统计"},
@@ -2676,7 +2676,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十二、沪深港通 ====================
-    "【十二】沪深港通": [
+    "沪深港通": [
         {"name": "stock_hsgt_em", "description": "沪深港通持股"},
         {"name": "stock_hsgt_hist_em", "description": "沪深港通历史数据"},
         {"name": "stock_hsgt_top10_em", "description": "沪深港通top10"},
@@ -2691,7 +2691,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十三、基金数据 ====================
-    "【十三】基金数据": [
+    "基金数据": [
         {"name": "fund_etf_spot_em", "description": "ETF实时行情"},
         {"name": "fund_etf_hist_em", "description": "ETF历史数据"},
         {"name": "fund_etf_hist_sina", "description": "ETF历史数据(新浪)"},
@@ -2711,7 +2711,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十四、期货行情 ====================
-    "【十四】期货行情": [
+    "期货行情": [
         {"name": "futures_zh_spot", "description": "期货实时行情"},
         {"name": "futures_zh_realtime", "description": "期货实时行情(详细)"},
         {"name": "futures_zh_daily_sina", "description": "期货日线数据"},
@@ -2723,7 +2723,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十五、期权行情 ====================
-    "【十五】期权行情": [
+    "期权行情": [
         {"name": "opt_em_spot_sina", "description": "期权实时行情"},
         {"name": "opt_em_daily_sina", "description": "期权日线数据"},
         {"name": "option_current_em", "description": "期权实时行情(东财)"},
@@ -2736,7 +2736,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十六、债券数据 ====================
-    "【十六】债券数据": [
+    "债券数据": [
         {"name": "bond_zh_hs_spot", "description": "债券实时行情"},
         {"name": "bond_zh_hs_daily", "description": "债券历史数据"},
         {"name": "bond_zh_hs_cov", "description": "可转债数据"},
@@ -2749,7 +2749,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十七、宏观数据 ====================
-    "【十七】宏观数据": [
+    "宏观数据": [
         {"name": "macro_cn_gdp", "description": "中国GDP"},
         {"name": "macro_cn_cpi", "description": "中国CPI"},
         {"name": "macro_cn_ppi", "description": "中国PPI"},
@@ -2766,7 +2766,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十八、外汇数据 ====================
-    "【十八】外汇数据": [
+    "外汇数据": [
         {"name": "forex_zh_spot", "description": "外汇实时行情"},
         {"name": "forex_zh_hist", "description": "外汇历史数据"},
         {"name": "forex_spot_em", "description": "外汇实时(主流)"},
@@ -2774,7 +2774,7 @@ CATEGORIES = {
     ],
 
     # ==================== 十九、新股/IPO ====================
-    "【十九】新股/IPO": [
+    "新股/IPO": [
         {"name": "stock_ipo_info_em", "description": "新股上市信息"},
         {"name": "stock_ipo_bis_em", "description": "新股申购"},
         {"name": "stock_ipo_declare_em", "description": "IPO申报信息"},
@@ -2785,7 +2785,7 @@ CATEGORIES = {
     ],
 
     # ==================== 二十、基础信息 ====================
-    "【二十】基础信息": [
+    "基础信息": [
         {"name": "stock_info_a_code_name", "description": "A股代码名称列表"},
         {"name": "stock_info_global_sci_em", "description": "全球市场重要指数"},
         {"name": "stock_szse_sse_info", "description": "深交所/上交所信息"},
@@ -2800,7 +2800,7 @@ CATEGORIES = {
     ],
 
     # ==================== 二十一、资讯数据 ====================
-    "【二十一】资讯数据": [
+    "资讯数据": [
         {"name": "stock_news_em", "description": "个股新闻"},
         {"name": "stock_notice_em", "description": "个股公告"},
         {"name": "stock_jgzy_em", "description": "机构调研"},
@@ -2808,7 +2808,7 @@ CATEGORIES = {
     ],
 
     # 补充未分类的函数
-    "【二十二】补充函数": [
+    "补充函数": [
         # 期货基础信息
         {"name": "futures_comm_info", "description": "期货品种信息"},
         {"name": "futures_contract_info_cffex", "description": "中金所合约信息"},
