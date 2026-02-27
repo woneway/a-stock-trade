@@ -1088,7 +1088,9 @@ AKSHARE_FUNCTIONS = {
         "description": "昨日涨停池",
         "category": "微观-涨跌停",
         "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id59",
-        "params": []
+        "params": [
+            {"name": "date", "default": "", "description": "日期YYYYMMDD", "required": False, "type": "str"},
+        ]
     },
     "stock_zt_pool_zbgc_em": {
         "name": "stock_zt_pool_zbgc_em",
