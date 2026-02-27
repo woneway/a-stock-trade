@@ -151,4 +151,17 @@ export const settingsApi = {
   },
 };
 
+// ==================== 持仓/成交扩展 API ====================
+
+// 持仓扩展 API (支持止盈止损)
+export const tradingPositionApi = {
+  setStopLoss: (id: number, stopLoss: number) =>
+    api.put(`/positions/${id}/stop-loss`, null, { params: { stop_loss: stopLoss } }),
+  setTakeProfit: (id: number, takeProfit: number) =>
+    api.put(`/positions/${id}/take-profit`, null, { params: { take_profit: takeProfit } }),
+  close: (id: number, closePrice: number) =>
+    api.post(`/positions/${id}/close`, null, { params: { close_price: closePrice } }),
+  getStats: () => api.get('/positions/stats/summary'),
+};
+
 export default api;
