@@ -8,7 +8,7 @@ from app.routers.backtest import router as backtest_router
 from app.routers.backtest import router_enhanced
 from app.routers.backtest_strategy import router as backtest_strategy_router
 from app.routers import optimizer_enhanced
-from app.routers import data_v2
+from app.routers import data_v2, yz_data
 
 
 @asynccontextmanager
@@ -39,6 +39,7 @@ app.include_router(router_enhanced.router)         # 增强回测
 app.include_router(backtest_strategy_router)       # 自定义策略
 app.include_router(optimizer_enhanced.router)       # 参数优化
 app.include_router(data_v2.router)                # 数据查询
+app.include_router(yz_data.router)                 # 游资数据(本地缓存)
 
 
 @app.get("/health")

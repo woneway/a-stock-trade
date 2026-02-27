@@ -13,7 +13,7 @@ from threading import Lock
 
 from sqlmodel import Session, select
 from app.database import engine
-from app.models.external_data import StockBasic, StockKline
+from app.models.external_data import ExternalStockBasic, ExternalStockKline
 
 logger = logging.getLogger(__name__)
 
@@ -102,18 +102,18 @@ class DataService:
         try:
             with Session(engine) as session:
                 stock = session.exec(
-                    select(StockBasic).where(StockBasic.code == stock_code)
+                    select(ExternalStockBasic).where(ExternalStockBasic.code == stock_code)
                 ).first()
 
                 if not stock:
                     return None
 
                 klines = session.exec(
-                    select(StockKline).where(
-                        StockKline.stock_id == stock.id,
-                        StockKline.trade_date >= start_date,
-                        StockKline.trade_date <= end_date,
-                    ).order_by(StockKline.trade_date.asc())
+                    select(ExternalStockKline).where(
+                        ExternalStockKline.stock_id == stock.id,
+                        ExternalStockKline.trade_date >= start_date,
+                        ExternalStockKline.trade_date <= end_date,
+                    ).order_by(ExternalStockKline.trade_date.asc())
                 ).all()
 
                 if not klines:
@@ -204,7 +204,7 @@ class DataService:
             with Session(engine) as session:
                 # 获取或创建股票
                 stock = session.exec(
-                    select(StockBasic).where(StockBasic.code == stock_code)
+                    select(ExternalStockBasic).where(ExternalStockBasic.code == stock_code)
                 ).first()
 
                 if not stock:
@@ -216,7 +216,7 @@ class DataService:
                         market = 'sz'
                         exchange = 'SZSE'
 
-                    stock = StockBasic(
+                    stock = ExternalStockBasic(
                         code=stock_code,
                         code_full=f"{market}.{stock_code}",
                         name=f"股票{stock_code}",
@@ -239,16 +239,16 @@ class DataService:
                         trade_date = trade_date.date()
 
                     existing = session.exec(
-                        select(StockKline).where(
-                            StockKline.stock_id == stock.id,
-                            StockKline.trade_date == trade_date
+                        select(ExternalStockKline).where(
+                            ExternalStockKline.stock_id == stock.id,
+                            ExternalStockKline.trade_date == trade_date
                         )
                     ).first()
 
                     if existing:
                         continue
 
-                    kline = StockKline(
+                    kline = ExternalStockKline(
                         stock_id=stock.id,
                         trade_date=trade_date,
                         open=row['Open'],
@@ -295,7 +295,7 @@ def get_stock_list() -> List[Dict[str, str]]:
     try:
         with Session(engine) as session:
             stocks = session.exec(
-                select(StockBasic).limit(100)
+                select(ExternalStockBasic).limit(100)
             ).all()
 
             result = [

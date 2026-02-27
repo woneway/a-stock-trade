@@ -3,8 +3,8 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, List
 
 
-class StockBasic(SQLModel, table=True):
-    __tablename__ = "stock_basics"
+class ExternalStockBasic(SQLModel, table=True):
+    __tablename__ = "external_stock_basics"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     code: str = Field(index=True, description="股票代码")
@@ -15,18 +15,18 @@ class StockBasic(SQLModel, table=True):
     list_status: str = Field(default="L", description="上市状态(L/D)")
     list_date: Optional[date] = Field(default=None, description="上市日期")
 
-    quotes: List["StockQuote"] = Relationship(back_populates="stock")
-    klines: List["StockKline"] = Relationship(back_populates="stock")
+    quotes: List["ExternalStockQuote"] = Relationship(back_populates="stock")
+    klines: List["ExternalStockKline"] = Relationship(back_populates="stock")
 
     class Config:
         populate_by_name = True
 
 
-class StockQuote(SQLModel, table=True):
-    __tablename__ = "stock_quotes"
+class ExternalStockQuote(SQLModel, table=True):
+    __tablename__ = "external_stock_quotes"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    stock_id: int = Field(foreign_key="stock_basics.id", index=True)
+    stock_id: int = Field(foreign_key="external_stock_basics.id", index=True)
     trade_date: date = Field(index=True)
 
     open: Optional[float] = Field(default=None, description="开盘价")
@@ -43,17 +43,17 @@ class StockQuote(SQLModel, table=True):
     market_cap: Optional[float] = Field(default=None, description="总市值")
     circ_market_cap: Optional[float] = Field(default=None, description="流通市值")
 
-    stock: Optional[StockBasic] = Relationship(back_populates="quotes")
+    stock: Optional[ExternalStockBasic] = Relationship(back_populates="quotes")
 
     class Config:
         populate_by_name = True
 
 
-class StockKline(SQLModel, table=True):
-    __tablename__ = "stock_klines"
+class ExternalStockKline(SQLModel, table=True):
+    __tablename__ = "external_stock_klines"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    stock_id: int = Field(foreign_key="stock_basics.id", index=True)
+    stock_id: int = Field(foreign_key="external_stock_basics.id", index=True)
     trade_date: date = Field(index=True)
 
     open: Optional[float] = Field(default=None)
@@ -66,14 +66,14 @@ class StockKline(SQLModel, table=True):
     pct_chg: Optional[float] = Field(default=None)
     turnover_rate: Optional[float] = Field(default=None)
 
-    stock: Optional[StockBasic] = Relationship(back_populates="klines")
+    stock: Optional[ExternalStockBasic] = Relationship(back_populates="klines")
 
     class Config:
         populate_by_name = True
 
 
-class SectorData(SQLModel, table=True):
-    __tablename__ = "sector_data"
+class ExternalSectorData(SQLModel, table=True):
+    __tablename__ = "external_sector_data"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     sector_code: str = Field(index=True)
@@ -91,8 +91,8 @@ class SectorData(SQLModel, table=True):
         populate_by_name = True
 
 
-class DragonListData(SQLModel, table=True):
-    __tablename__ = "dragon_list_data"
+class ExternalDragonListData(SQLModel, table=True):
+    __tablename__ = "external_dragon_list_data"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     trade_date: date = Field(index=True)
@@ -109,8 +109,8 @@ class DragonListData(SQLModel, table=True):
         populate_by_name = True
 
 
-class LimitData(SQLModel, table=True):
-    __tablename__ = "limit_data"
+class ExternalLimitData(SQLModel, table=True):
+    __tablename__ = "external_limit_data"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     trade_date: date = Field(unique=True, index=True)
@@ -125,8 +125,8 @@ class LimitData(SQLModel, table=True):
         populate_by_name = True
 
 
-class CapitalFlowData(SQLModel, table=True):
-    __tablename__ = "capital_flow_data"
+class ExternalCapitalFlowData(SQLModel, table=True):
+    __tablename__ = "external_capital_flow_data"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     trade_date: date = Field(index=True)
@@ -139,8 +139,8 @@ class CapitalFlowData(SQLModel, table=True):
         populate_by_name = True
 
 
-class NorthMoneyData(SQLModel, table=True):
-    __tablename__ = "north_money_data"
+class ExternalNorthMoneyData(SQLModel, table=True):
+    __tablename__ = "external_north_money_data"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     trade_date: date = Field(unique=True, index=True)
@@ -153,8 +153,8 @@ class NorthMoneyData(SQLModel, table=True):
         populate_by_name = True
 
 
-class SyncLog(SQLModel, table=True):
-    __tablename__ = "sync_logs"
+class ExternalSyncLog(SQLModel, table=True):
+    __tablename__ = "external_sync_logs"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     source: str = Field(index=True)

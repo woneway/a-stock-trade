@@ -135,12 +135,12 @@ def get_backtest_stocks(
     limit: int = 50
 ):
     """获取可回测的股票列表"""
-    from app.models.external_data import StockBasic
+    from app.models.external_data import ExternalStockBasic
     from sqlmodel import select
 
     stocks = db.exec(
-        select(StockBasic).where(
-            StockBasic.list_status == "L"
+        select(ExternalStockBasic).where(
+            ExternalStockBasic.list_status == "L"
         ).limit(limit)
     ).all()
 

@@ -112,14 +112,14 @@ def get_data_stats():
     """获取数据统计"""
     from sqlmodel import select, func
     from app.database import engine
-    from app.models.external_data import StockBasic, StockKline
+    from app.models.external_data import ExternalStockBasic, ExternalStockKline
 
     with Session(engine) as session:
-        stock_count = session.exec(func.count(StockBasic.id)).first() or 0
-        kline_count = session.exec(func.count(StockKline.id)).first() or 0
+        stock_count = session.exec(func.count(ExternalStockBasic.id)).first() or 0
+        kline_count = session.exec(func.count(ExternalStockKline.id)).first() or 0
 
         latest_kline = session.exec(
-            select(func.max(StockKline.trade_date))
+            select(func.max(ExternalStockKline.trade_date))
         ).first()
 
     return {
