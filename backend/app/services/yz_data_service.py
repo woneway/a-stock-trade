@@ -795,8 +795,17 @@ class YzDataService:
     def _get_lhb_yytj_from_local() -> Optional[List[Dict]]:
         try:
             with Session(engine) as session:
+                # 获取最新日期的数据
+                latest_date = session.exec(
+                    select(ExternalLhbYytj.trade_date).order_by(ExternalLhbYytj.trade_date.desc()).limit(1)
+                ).first()
+
+                if not latest_date:
+                    return None
+
                 records = session.exec(
-                    select(ExternalLhbYytj).order_by(ExternalLhbYytj.trade_date.desc())
+                    select(ExternalLhbYytj)
+                    .where(ExternalLhbYytj.trade_date == latest_date)
                 ).all()
                 if records:
                     return [r.model_dump() for r in records]
@@ -859,8 +868,18 @@ class YzDataService:
     def _get_lhb_yyb_from_local() -> Optional[List[Dict]]:
         try:
             with Session(engine) as session:
+                # 获取最新日期的数据
+                latest_date = session.exec(
+                    select(ExternalLhbYyb.trade_date).order_by(ExternalLhbYyb.trade_date.desc()).limit(1)
+                ).first()
+
+                if not latest_date:
+                    return None
+
                 records = session.exec(
-                    select(ExternalLhbYyb).order_by(ExternalLhbYyb.up_count.desc()).limit(100)
+                    select(ExternalLhbYyb)
+                    .where(ExternalLhbYyb.trade_date == latest_date)
+                    .order_by(ExternalLhbYyb.up_count.desc())
                 ).all()
                 if records:
                     return [r.model_dump() for r in records]
