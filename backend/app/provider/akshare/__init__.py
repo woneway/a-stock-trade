@@ -52,12 +52,6 @@ from app.provider.akshare.dzjy import (
     get_dzjy_mrtj,
 )
 
-# 行业板块
-from app.provider.akshare.board import (
-    get_board_concept_name_em,
-    get_board_industry_name_em,
-)
-
 # 热点数据
 from app.provider.akshare.hot import (
     get_market_activity_legu,
@@ -95,9 +89,6 @@ __all__ = [
     # 大宗交易
     "get_dzjy_mrmx",
     "get_dzjy_mrtj",
-    # 行业板块
-    "get_board_concept_name_em",
-    "get_board_industry_name_em",
     # 热点数据
     "get_market_activity_legu",
     "get_a_high_low_statistics",
