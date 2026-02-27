@@ -1,5 +1,5 @@
 """
-参数优化器 - 网格搜索和随机搜索
+参数优化 Service
 """
 from typing import Dict, List, Any, Callable
 from dataclasses import dataclass

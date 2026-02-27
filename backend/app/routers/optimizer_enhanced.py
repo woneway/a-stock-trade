@@ -2,10 +2,10 @@
 参数优化 API
 """
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, List, Any
 
-from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine
-from app.routers.backtest.optimizer import ParameterOptimizer
+from app.services.backtest_engine import BacktestEngine
+from app.services.optimizer import ParameterOptimizer
 
 router = APIRouter(prefix="/api/optimizer", tags=["optimizer"])
 
@@ -65,7 +65,7 @@ def run_optimization(
         except:
             pass
 
-    engine = EnhancedBacktestEngine(initial_capital)
+    engine = BacktestEngine(initial_capital)
 
     df = engine.get_kline_dataframe(
         stock_code,

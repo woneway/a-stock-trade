@@ -3,15 +3,14 @@
 """
 import json
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from datetime import date, timedelta
 from sqlmodel import Session, select
 
 from app.database import engine
-from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine as BacktestEngine
+from app.services.backtest_engine import BacktestEngine
 from app.models.backtest_strategy import BacktestStrategy
 from app.models.external_data import ExternalStockBasic
-from app.services.data_service import DataService
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -61,7 +60,6 @@ def run_backtest(
 
     # 检查是否是自定义策略
     if strategy_id:
-        # 从数据库获取自定义策略
         with Session(engine) as session:
             strategy = session.get(BacktestStrategy, strategy_id)
             if not strategy:
@@ -121,27 +119,6 @@ def get_backtest_stocks(limit: int = 50):
             }
             for s in stocks
         ]
-
-
-@router.get("/klines/{stock_code}")
-def get_backtest_klines(
-    stock_code: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    limit: int = 500
-):
-    """获取回测用K线数据"""
-    if not start_date:
-        start_date = (date.today() - timedelta(days=365)).strftime("%Y-%m-%d")
-    if not end_date:
-        end_date = date.today().strftime("%Y-%m-%d")
-
-    df = DataService.get_kline_dataframe(stock_code, start_date, end_date)
-
-    if df is None or df.empty:
-        return []
-
-    return df.head(limit).to_dict('records')
 
 
 @router.get("/strategies")

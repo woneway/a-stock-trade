@@ -1,12 +1,12 @@
 """
-增强的回测引擎 - 支持更多策略和交易记录
+回测引擎 Service
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import pandas as pd
 from app.services.data_service import DataService
 
 
-class EnhancedBacktestEngine:
+class BacktestEngine:
     """增强的回测引擎，返回详细交易记录"""
 
     def __init__(self, initial_capital: float = 100000):
@@ -332,6 +332,54 @@ class EnhancedBacktestEngine:
         result['trades'] = self._get_trade_records(stats)
         result['equity_curve'] = self._get_equity_curve(stats)
         return result
+
+    def run_custom_strategy(
+        self,
+        df: pd.DataFrame,
+        code: str,
+        params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """运行自定义策略"""
+        from backtesting import Backtest, Strategy
+        import sys
+        from io import StringIO
+
+        # 编译并执行策略代码
+        try:
+            compiled = compile(code, "<string>", "exec")
+            local_ns = {}
+            exec(compiled, local_ns)
+
+            # 查找策略类
+            StrategyClass = None
+            for name, obj in local_ns.items():
+                if isinstance(obj, type) and issubclass(obj, Strategy) and obj != Strategy:
+                    StrategyClass = obj
+                    break
+
+            if not StrategyClass:
+                return {"error": "未找到策略类"}
+
+            # 设置策略参数
+            for key, value in params.items():
+                if hasattr(StrategyClass, key):
+                    setattr(StrategyClass, key, value)
+
+            bt = Backtest(
+                df, StrategyClass,
+                cash=self.initial_capital,
+                commission=0.001,
+                exclusive_orders=True
+            )
+            stats = bt.run()
+
+            result = self._format_stats(stats)
+            result['trades'] = self._get_trade_records(stats)
+            result['equity_curve'] = self._get_equity_curve(stats)
+            return result
+
+        except Exception as e:
+            return {"error": str(e)}
 
     def _format_stats(self, stats) -> Dict[str, Any]:
         import math

@@ -2,9 +2,9 @@
 增强回测 API
 """
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List, Dict, Any
+from typing import Optional
 
-from app.routers.backtest.engine_enhanced import EnhancedBacktestEngine
+from app.services.backtest_engine import BacktestEngine
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
 
@@ -30,7 +30,7 @@ def run_backtest(
     stop_profit_pct: float = 10,
 ):
     """运行增强回测 - 返回详细交易记录和指标"""
-    engine = EnhancedBacktestEngine(initial_capital)
+    engine = BacktestEngine(initial_capital)
 
     df = engine.get_kline_dataframe(
         stock_code,

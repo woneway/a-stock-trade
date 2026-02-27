@@ -6,6 +6,7 @@
 from typing import List, Optional, Any
 from datetime import date, datetime, timedelta
 import pymysql
+import pandas as pd
 from sqlmodel import Session, select
 
 from app.models.stock_info import StockInfo
@@ -134,6 +135,44 @@ class DataService:
         conn.close()
 
         return [StockKlineMinute(**r) for r in results]
+
+    @staticmethod
+    def get_kline_dataframe(
+        stock_code: str,
+        start_date: str,
+        end_date: str
+    ) -> pd.DataFrame:
+        """
+        获取K线DataFrame (用于回测)
+
+        Args:
+            stock_code: 股票代码
+            start_date: 开始日期，格式 YYYYMMDD
+            end_date: 结束日期，格式 YYYYMMDD
+
+        Returns:
+            DataFrame
+        """
+        conn = _get_astock_conn()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+        query = """
+            SELECT trade_date, open, high, low, close, volume
+            FROM stock_kline
+            WHERE stock_code = %s AND trade_date >= %s AND trade_date <= %s
+            ORDER BY trade_date ASC
+        """
+        cursor.execute(query, (stock_code, start_date, end_date))
+        results = cursor.fetchall()
+        conn.close()
+
+        if not results:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(results)
+        df.columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
+        df.set_index('Date', inplace=True)
+        return df
 
     # ============ AKShare 接口方法 ============
 
