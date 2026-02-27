@@ -391,8 +391,14 @@ class CacheService:
             data = method(*query_args) if all(query_args) else None
 
         elif query_type == "date_range":
-            # 日期范围查询 - 返回最新数据
-            data = method()
+            # 日期范围查询
+            date_params = config.get("date_params", [])
+            query_args = [params.get(p) for p in date_params]
+            # 如果没有提供日期参数，返回最新数据
+            if all(query_args):
+                data = method(*query_args)
+            else:
+                data = method()
 
         elif query_type == "latest":
             # 无参数，返回最新数据
