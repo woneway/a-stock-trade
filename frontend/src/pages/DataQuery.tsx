@@ -51,13 +51,10 @@ export default function DataQuery() {
   // 接口状态（测试结果）
   const [funcStatus, setFuncStatus] = useState<Record<string, 'testing' | 'success' | 'error' | null>>({
     "stock_zh_a_minute": "success",
-    "stock_board_industry_name_em": "error",
     "forex_zh_spot": "error",
     "forex_spot_em": "error",
-    "stock_zh_a_limit_down_em": "error",
     "futures_comm_info": "error",
     "stock_zh_a_new_em": "error",
-    "stock_zh_a_limit_up_sina": "error",
     "stock_zt_pool_em": "success",
     "stock_us_spot_em": "error",
     "stock_zh_a_hist": "error",
@@ -112,12 +109,10 @@ export default function DataQuery() {
     "bond_zh_cov": "success",
     "stock_lhb_yybph_em": "success",
     "stock_market_fund_flow": "success",
-    "stock_zh_a_spot_em": "error",
     "stock_info_sh_name_code": "success",
-    "stock_board_industry_spot_em": "error",
-    "stock_hsgt_em": "error",
+    "stock_board_industry_spot_em": "success",
+    "stock_hsgt_hold_stock_em": "success",
     "fund_open_fund_daily_em": "error",
-    "stock_zh_a_limit_up_em": "error",
     "stock_info_sz_name_code": "success",
     "stock_zh_index_spot_em": "error",
     "stock_hsgt_hist_em": "success",
@@ -127,7 +122,11 @@ export default function DataQuery() {
     "stock_individual_fund_flow_rank": "error",
     "stock_board_concept_name_em": "error",
     "stock_board_industry_cons_em": "error",
-    "stock_info_a_code_name": "success"
+    "stock_info_a_code_name": "success",
+    // 新增可用接口
+    "stock_dzjy_mrtj": "success",
+    "stock_fund_flow_industry": "success",
+    "stock_lhb_yytj_sina": "success",
   });
 
   // 游资常用分类
@@ -436,21 +435,20 @@ export default function DataQuery() {
     name: '游资常用',
     icon: '🔥',
     items: [
-      { name: 'stock_zh_a_spot_em', desc: 'A股实时行情' },
-      { name: 'stock_zh_a_limit_up_em', desc: '涨停板' },
       { name: 'stock_zt_pool_em', desc: '涨停板池' },
       { name: 'stock_zt_pool_strong_em', desc: '涨停板池-强势' },
       { name: 'stock_zt_pool_previous_em', desc: '昨日涨停池' },
-      { name: 'stock_sector_fund_flow_rank', desc: '板块资金流向' },
       { name: 'stock_individual_fund_flow', desc: '个股资金流向' },
       { name: 'stock_lhb_detail_em', desc: '龙虎榜详情' },
       { name: 'stock_lh_yyb_most', desc: '龙虎榜营业部' },
-      { name: 'stock_board_industry_name_em', desc: '行业板块' },
+      { name: 'stock_lh_yyb_capital', desc: '营业部资金实力' },
+      { name: 'stock_lhb_yytj_sina', desc: '游资席位动向' },
+      { name: 'stock_board_industry_spot_em', desc: '行业板块' },
       { name: 'stock_board_concept_name_em', desc: '概念板块' },
-      { name: 'stock_hsgt_em', desc: '沪深港通持股' },
-      { name: 'stock_rzrq_em', desc: '融资融券' },
-      { name: 'stock_dzjy_em', desc: '大宗交易' },
-      { name: 'stock_main_stock_holder', desc: '主要股东持股' },
+      { name: 'stock_hsgt_hold_stock_em', desc: '沪深港通持股' },
+      { name: 'stock_dzjy_mrtj', desc: '大宗交易' },
+      { name: 'stock_fund_flow_industry', desc: '行业资金流向' },
+      { name: 'stock_market_fund_flow', desc: '市场资金流向' },
     ]
   };
 

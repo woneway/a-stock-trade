@@ -13,6 +13,7 @@ from sqlmodel import Session, select, delete, func
 
 from app.database import engine
 from app.models.data_lineage import DataLineage
+from app.models.trade_calendar import TradeCalendar
 from app.models.external_yz_common import (
     ExternalStockSpot,
     ExternalLimitUp,
@@ -56,6 +57,7 @@ class CacheService:
         "stock_board_concept_name_em": "_get_board_concept_from_local",
         "stock_zt_pool_strong_em": "_get_zt_pool_strong_from_local",
         "stock_zt_pool_previous_em": "_get_zt_pool_previous_from_local",
+        "tool_trade_date_hist_sina": "_get_trade_calendar_from_local",
     }
 
     SAVE_METHODS = {
@@ -71,6 +73,7 @@ class CacheService:
         "stock_board_concept_name_em": "_save_board_concept_to_local",
         "stock_zt_pool_strong_em": "_save_zt_pool_strong_to_local",
         "stock_zt_pool_previous_em": "_save_zt_pool_previous_to_local",
+        "tool_trade_date_hist_sina": "_save_trade_calendar_to_local",
     }
 
     # ==================== 接口配置 ====================
@@ -154,6 +157,13 @@ class CacheService:
             "sync": True,
             "query_type": "date",
             "date_param": "date",
+        },
+        # 交易日历
+        "tool_trade_date_hist_sina": {
+            "model": TradeCalendar,
+            "sync": True,
+            "query_type": "date_range",
+            "date_params": ["start_date", "end_date"],
         },
     }
 
@@ -1253,6 +1263,121 @@ class CacheService:
                 logger.info(f"已保存 {len(df)} 条龙虎榜营业部数据")
         except Exception as e:
             logger.error(f"保存龙虎榜营业部失败: {e}")
+
+    # ==================== 交易日历 ====================
+
+    @staticmethod
+    def get_trade_calendar(start_date: str = None, end_date: str = None) -> List[Dict]:
+        """获取交易日历 - 优先本地"""
+        # 尝试从本地获取
+        local_data = CacheService._get_trade_calendar_from_local(start_date, end_date)
+        if local_data:
+            logger.info(f"从本地获取交易日历 {len(local_data)} 条")
+            return local_data
+
+        # 从 akshare 获取并存储
+        df = CacheService._fetch_trade_calendar_from_akshare(start_date, end_date)
+        if df is None or df.empty:
+            return []
+
+        # 存储到本地
+        CacheService._save_trade_calendar_to_local(df)
+        return CacheService._convert_df_to_records(df)
+
+    @staticmethod
+    def _get_trade_calendar_from_local(start_date: str = None, end_date: str = None) -> Optional[List[Dict]]:
+        """从本地获取交易日历"""
+        try:
+            with Session(engine) as session:
+                query = select(TradeCalendar)
+
+                # 如果提供了日期范围
+                if start_date:
+                    start = datetime.strptime(start_date, "%Y%m%d").date()
+                    query = query.where(TradeCalendar.trade_date >= start)
+                if end_date:
+                    end = datetime.strptime(end_date, "%Y%m%d").date()
+                    query = query.where(TradeCalendar.trade_date <= end)
+
+                query = query.order_by(TradeCalendar.trade_date.desc())
+
+                records = session.exec(query).all()
+                if records:
+                    return [r.model_dump() for r in records]
+        except Exception as e:
+            logger.warning(f"从本地获取交易日历失败: {e}")
+        return None
+
+    @staticmethod
+    def _fetch_trade_calendar_from_akshare(start_date: str = None, end_date: str = None) -> Optional[pd.DataFrame]:
+        """从akshare获取交易日历"""
+        import akshare as ak
+        try:
+            # 格式化日期参数
+            start = start_date if start_date else ""
+            end = end_date if end_date else ""
+
+            df = ak.tool_trade_date_hist_sina(start_date=start, end_date=end)
+
+            if df is None or df.empty:
+                logger.warning("akshare返回空交易日历数据")
+                return None
+
+            # 重命名列以保持一致性
+            if 'trade_date' in df.columns:
+                df = df.rename(columns={'trade_date': 'trade_date'})
+
+            return df
+        except Exception as e:
+            logger.error(f"从akshare获取交易日历失败: {e}")
+            return None
+
+    @staticmethod
+    def _save_trade_calendar_to_local(df: pd.DataFrame):
+        """保存交易日历到本地"""
+        try:
+            if df is None or df.empty:
+                logger.info("交易日历数据为空，跳过保存")
+                return
+
+            with Session(engine) as session:
+                # 清空现有数据（交易日历需要全量替换）
+                session.exec(delete(TradeCalendar))
+
+                for _, row in df.iterrows():
+                    trade_date_val = row.get('trade_date')
+                    if pd.isna(trade_date_val):
+                        continue
+
+                    # 转换日期格式
+                    try:
+                        if isinstance(trade_date_val, str):
+                            trade_date = datetime.strptime(trade_date_val, "%Y-%m-%d").date()
+                        elif isinstance(trade_date_val, date):
+                            trade_date = trade_date_val
+                        else:
+                            continue
+                    except Exception:
+                        continue
+
+                    # 判断是否为交易日 (0=非交易日, 1=交易日)
+                    is_trading = 1
+                    if 'is_trading_day' in row.columns:
+                        val = row.get('is_trading_day')
+                        if pd.notna(val):
+                            is_trading_day_map = {'0': 0, '1': 1, 0: 0, 1: 1, True: 1, False: 0}
+                            is_trading = is_trading_day_map.get(val, 1)
+
+                    record = TradeCalendar(
+                        trade_date=trade_date,
+                        is_trading_day=is_trading,
+                    )
+                    session.add(record)
+
+                session.commit()
+                logger.info(f"已保存 {len(df)} 条交易日历数据")
+        except Exception as e:
+            logger.error(f"保存交易日历失败: {e}")
 
     # ==================== 工具方法 ====================
 

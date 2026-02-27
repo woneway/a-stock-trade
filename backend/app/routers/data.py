@@ -129,11 +129,105 @@ def get_data_stats():
     }
 
 
+@router.get("/trade-status")
+def get_trade_status():
+    """获取当前交易状态（是否交易时间、是否交易日）"""
+    from datetime import datetime, time
+
+    now = datetime.now()
+    today = now.date()
+
+    # 判断是否在交易时间 (9:30-11:30, 13:00-15:00)
+    current_time = now.time()
+    morning_start = time(9, 30)
+    morning_end = time(11, 30)
+    afternoon_start = time(13, 0)
+    afternoon_end = time(15, 0)
+
+    is_trade_time = (morning_start <= current_time <= morning_end) or (afternoon_start <= current_time <= afternoon_end)
+
+    # 判断是否为交易日 (简化判断：周一到周五)
+    is_weekday = now.weekday() < 5
+
+    # 返回完整的交易状态信息
+    return {
+        "is_trade_time": is_trade_time,
+        "is_trade_day": is_weekday,
+        "current_time": now.strftime("%H:%M:%S"),
+        "current_date": now.strftime("%Y-%m-%d"),
+        "weekday": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][now.weekday()],
+    }
+
+
+@router.get("/trade-calendar")
+def get_trade_calendar(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 100,
+):
+    """
+    获取交易日历
+    - 优先从本地数据库获取
+    - 本地无数据时从akshare获取并存储
+    """
+    from app.services.cache_service import CacheService
+
+    # 格式化日期参数
+    start = start_date.replace("-", "") if start_date else None
+    end = end_date.replace("-", "") if end_date else None
+
+    data = CacheService.get_trade_calendar(start, end)
+
+    # 过滤只返回交易日
+    trading_days = [d for d in data if d.get("is_trading_day") == 1]
+
+    return {
+        "count": len(trading_days),
+        "data": trading_days[:limit]
+    }
+
+
+@router.post("/trade-calendar/sync")
+def sync_trade_calendar(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
+    """
+    手动同步交易日历数据
+    """
+    from app.services.cache_service import CacheService
+
+    # 格式化日期参数
+    start = start_date.replace("-", "") if start_date else None
+    end = end_date.replace("-", "") if end_date else None
+
+    # 从 akshare 获取并保存到本地
+    df = CacheService._fetch_trade_calendar_from_akshare(start, end)
+    if df is None or df.empty:
+        raise HTTPException(status_code=500, detail="从akshare获取交易日历失败")
+
+    CacheService._save_trade_calendar_to_local(df)
+
+    return {"status": "success", "synced": len(df)}
+
+
 # ========== Akshare 函数查询 ==========
 # 完整的 akshare A股接口列表
 # 分类体系：宏观(政策/经济) -> 中观(板块/行业/概念) -> 微观(个股)
 # 游资常用接口重点标注
 AKSHARE_FUNCTIONS = {
+
+    # ------ 交易日历 ------
+    "tool_trade_date_hist_sina": {
+        "name": "tool_trade_date_hist_sina",
+        "description": "A股交易日历",
+        "category": "工具-交易日历",
+        "doc_url": "https://akshare.akfamily.xyz/api.html#id5",
+        "params": [
+            {"name": "start_date", "default": "", "description": "开始日期YYYYMMDD", "required": False, "type": "str"},
+            {"name": "end_date", "default": "", "description": "结束日期YYYYMMDD", "required": False, "type": "str"},
+        ]
+    },
 
     # ========================================
     # 一、微观 - 个股数据 (最爱用)
@@ -152,14 +246,6 @@ AKSHARE_FUNCTIONS = {
             {"name": "end_date", "default": "20250227", "description": "结束日期YYYYMMDD", "required": True, "type": "str"},
             {"name": "adjust", "default": "qfq", "description": "复权: qfq/hfq/空字符串", "required": False, "type": "str"},
         ]
-    },
-    "stock_zh_a_spot_em": {
-        "name": "stock_zh_a_spot_em",
-        "description": "A股实时行情【游资最爱】",
-        "category": "微观-个股行情",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id2",
-        "params": [],
-        "remark": "返回全部A股实时行情，包含涨跌幅、换手率、量比等核心指标"
     },
     "stock_zh_a_hist_sina": {
         "name": "stock_zh_a_hist_sina",
@@ -413,32 +499,6 @@ AKSHARE_FUNCTIONS = {
     # ========================================
 
     # ------ 涨跌停数据【游资必看】------
-    "stock_zh_a_limit_up_em": {
-        "name": "stock_zh_a_limit_up_em",
-        "description": "涨停板【游资最爱】",
-        "category": "中观-涨跌停",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id3",
-        "params": [
-            {"name": "date", "default": "", "description": "日期YYYYMMDD", "required": False, "type": "str"},
-        ],
-        "remark": "返回当日涨停股票列表，包含代码、名称、涨停原因、封板金额"
-    },
-    "stock_zh_a_limit_down_em": {
-        "name": "stock_zh_a_limit_down_em",
-        "description": "跌停板",
-        "category": "中观-涨跌停",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id4",
-        "params": [
-            {"name": "date", "default": "", "description": "日期YYYYMMDD", "required": False, "type": "str"},
-        ]
-    },
-    "stock_zh_a_limit_up_sina": {
-        "name": "stock_zh_a_limit_up_sina",
-        "description": "新浪涨停板",
-        "category": "中观-涨跌停",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id5",
-        "params": []
-    },
     "stock_zt_pool_em": {
         "name": "stock_zt_pool_em",
         "description": "涨停板池【游资常用】",
@@ -459,14 +519,6 @@ AKSHARE_FUNCTIONS = {
     },
 
     # ------ 板块行情 ------
-    "stock_board_industry_name_em": {
-        "name": "stock_board_industry_name_em",
-        "description": "行业板块行情",
-        "category": "中观-板块行情",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id29",
-        "params": [],
-        "remark": "返回行业板块涨跌排名，看板块轮动"
-    },
     "stock_board_concept_name_em": {
         "name": "stock_board_concept_name_em",
         "description": "概念板块行情",
@@ -1022,13 +1074,6 @@ AKSHARE_FUNCTIONS = {
     },
 
     # ------ 涨跌停数据 ------
-    "stock_zh_a_limit_up_sina": {
-        "name": "stock_zh_a_limit_up_sina",
-        "description": "涨停板(新浪)",
-        "category": "微观-涨跌停",
-        "doc_url": "https://akshare.akfamily.xyz/data/stock/stock.html#id54",
-        "params": []
-    },
     "stock_zt_pool_dtgc_em": {
         "name": "stock_zt_pool_dtgc_em",
         "description": "涨停池-龙头股",
@@ -2592,7 +2637,7 @@ CATEGORIES = {
 
     # ==================== 五、板块行情 ====================
     "板块行情": [
-        {"name": "stock_board_industry_name_em", "description": "行业板块行情"},
+        {"name": "stock_board_industry_spot_em", "description": "行业板块实时行情"},
         {"name": "stock_board_concept_name_em", "description": "概念板块行情"},
         {"name": "stock_board_industry_cons_em", "description": "行业板块成分股"},
         {"name": "stock_board_concept_cons_em", "description": "概念板块成分股"},
@@ -2945,6 +2990,10 @@ def execute_akshare_function(request: AkshareExecuteRequest):
         # 无缓存，调用 akshare
         result = _call_akshare(func_name, params)
 
+        # 检查是否有错误
+        if "error" in result:
+            raise HTTPException(status_code=502, detail=result["error"])
+
         # 如果需要同步，则存储到数据库
         if cache_config["sync"]:
             CacheService.save_to_local(func_name, params, result)
@@ -2955,6 +3004,11 @@ def execute_akshare_function(request: AkshareExecuteRequest):
 
     # 无缓存配置或禁用缓存，直接调用 akshare
     result = _call_akshare(func_name, params)
+
+    # 检查是否有错误
+    if "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+
     # 直接调用 akshare 时，血缘来源为 akshare
     lineage = {
         "func_name": func_name,
@@ -2968,46 +3022,55 @@ def execute_akshare_function(request: AkshareExecuteRequest):
 def _call_akshare(func_name: str, params: dict):
     """调用 akshare 函数"""
     import akshare as ak
+    import traceback
     from sqlmodel import Session
 
-    func = getattr(ak, func_name)
+    try:
+        func = getattr(ak, func_name)
 
-    # 过滤有效参数
-    valid_params = {}
-    func_params = AKSHARE_FUNCTIONS[func_name]["params"]
-    for p in func_params:
-        pname = p["name"]
-        if pname in params and params[pname]:
-            valid_params[pname] = params[pname]
+        # 过滤有效参数
+        valid_params = {}
+        func_params = AKSHARE_FUNCTIONS[func_name]["params"]
+        for p in func_params:
+            pname = p["name"]
+            if pname in params and params[pname]:
+                valid_params[pname] = params[pname]
 
-    if valid_params:
-        result = func(**valid_params)
-    else:
-        result = func()
+        if valid_params:
+            result = func(**valid_params)
+        else:
+            result = func()
 
-    # 转换为dict格式，处理NaN值
-    def clean_value(v):
-        import math
-        if v is None:
-            return None
-        if isinstance(v, float):
-            if math.isnan(v) or math.isinf(v):
+        # 转换为dict格式，处理NaN值
+        def clean_value(v):
+            import math
+            if v is None:
                 return None
-        return v
+            if isinstance(v, float):
+                if math.isnan(v) or math.isinf(v):
+                    return None
+            return v
 
-    def clean_record(record):
-        return {k: clean_value(v) for k, v in record.items()}
+        def clean_record(record):
+            return {k: clean_value(v) for k, v in record.items()}
 
-    if hasattr(result, 'to_dict'):
-        records = result.to_dict('records')
-        cleaned_records = [clean_record(r) for r in records]
-        return {"data": cleaned_records, "columns": list(result.columns) if hasattr(result, 'columns') else []}
-    elif isinstance(result, list):
-        if result and isinstance(result[0], dict):
-            result = [clean_record(r) if isinstance(r, dict) else r for r in result]
-        return {"data": result, "columns": []}
-    else:
-        return {"data": str(result), "columns": []}
+        if hasattr(result, 'to_dict'):
+            records = result.to_dict('records')
+            cleaned_records = [clean_record(r) for r in records]
+            return {"data": cleaned_records, "columns": list(result.columns) if hasattr(result, 'columns') else []}
+        elif isinstance(result, list):
+            if result and isinstance(result[0], dict):
+                result = [clean_record(r) if isinstance(r, dict) else r for r in result]
+            return {"data": result, "columns": []}
+        else:
+            return {"data": str(result), "columns": []}
+    except Exception as e:
+        # 记录详细错误日志
+        error_msg = f"调用 akshare 函数 {func_name} 失败: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        # 返回错误信息而不是抛出异常
+        return {"error": error_msg, "data": [], "columns": []}
 
 
 @router.post("/akshare/sync/{func_name}")
