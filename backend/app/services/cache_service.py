@@ -2,7 +2,9 @@
 游资常用数据服务
 - 优先查询本地数据库
 - 本地无数据或过期时调用 akshare 并自动存储
+- 支持数据血缘追踪
 """
+import hashlib
 from datetime import date, datetime, timedelta
 from typing import Optional, Dict, Any, List
 import pandas as pd
@@ -10,6 +12,7 @@ import logging
 from sqlmodel import Session, select, delete, func
 
 from app.database import engine
+from app.models.data_lineage import DataLineage
 from app.models.external_yz_common import (
     ExternalStockSpot,
     ExternalLimitUp,
@@ -24,8 +27,8 @@ from app.models.external_yz_common import (
 logger = logging.getLogger(__name__)
 
 
-class YzDataService:
-    """游资数据服务 - 本地缓存优先"""
+class CacheService:
+    """通用数据缓存服务 - 支持本地缓存和数据血缘追踪"""
 
     # 缓存有效期（秒）
     SPOT_CACHE_TTL = 60        # 实时行情 60秒
@@ -214,7 +217,85 @@ class YzDataService:
     @staticmethod
     def _get_column_aliases(func_name: str) -> Dict[str, str]:
         """获取字段中文映射"""
-        return YzDataService.COLUMN_ALIASES.get(func_name, {})
+        return CacheService.COLUMN_ALIASES.get(func_name, {})
+
+    # ==================== 数据血缘方法 ====================
+
+    @staticmethod
+    def _compute_params_hash(params: dict) -> str:
+        """计算参数哈希"""
+        # 将参数转换为字符串并排序，确保相同参数产生相同哈希
+        param_str = "".join(f"{k}={v}" for k, v in sorted(params.items()))
+        return hashlib.md5(param_str.encode()).hexdigest()[:16]
+
+    @staticmethod
+    def _get_lineage(func_name: str, params: dict) -> Optional[DataLineage]:
+        """获取数据血缘记录"""
+        params_hash = CacheService._compute_params_hash(params)
+        with Session(engine) as session:
+            lineage = session.exec(
+                select(DataLineage).where(
+                    DataLineage.func_name == func_name,
+                    DataLineage.params_hash == params_hash,
+                )
+            ).first()
+            return lineage
+
+    @staticmethod
+    def _update_lineage(
+        func_name: str,
+        params: dict,
+        source: str,
+        record_count: int,
+    ):
+        """更新数据血缘记录"""
+        params_hash = CacheService._compute_params_hash(params)
+        now = datetime.now()
+
+        with Session(engine) as session:
+            # 查找现有记录
+            lineage = session.exec(
+                select(DataLineage).where(
+                    DataLineage.func_name == func_name,
+                    DataLineage.params_hash == params_hash,
+                )
+            ).first()
+
+            if lineage:
+                # 更新现有记录
+                lineage.source = source
+                lineage.last_updated = now
+                lineage.record_count = record_count
+            else:
+                # 创建新记录
+                lineage = DataLineage(
+                    func_name=func_name,
+                    params_hash=params_hash,
+                    source=source,
+                    last_updated=now,
+                    record_count=record_count,
+                )
+                session.add(lineage)
+
+            session.commit()
+
+    @staticmethod
+    def get_lineage_info(func_name: str, params: dict) -> Dict[str, Any]:
+        """获取数据血缘信息"""
+        lineage = CacheService._get_lineage(func_name, params)
+        if lineage:
+            return {
+                "func_name": lineage.func_name,
+                "source": lineage.source,
+                "last_updated": lineage.last_updated.isoformat() if lineage.last_updated else None,
+                "record_count": lineage.record_count,
+            }
+        return {
+            "func_name": func_name,
+            "source": "unknown",
+            "last_updated": None,
+            "record_count": 0,
+        }
 
     @staticmethod
     def _convert_to_chinese(data: List[Dict], func_name: str) -> Dict:
@@ -222,7 +303,7 @@ class YzDataService:
         if not data:
             return {"data": data, "columns": []}
 
-        column_aliases = YzDataService._get_column_aliases(func_name)
+        column_aliases = CacheService._get_column_aliases(func_name)
 
         if column_aliases:
             # 转换 columns 为中文
@@ -242,16 +323,16 @@ class YzDataService:
     def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
         """从本地查询数据，返回 {data, columns} 格式"""
         # 获取接口配置
-        config = YzDataService.CACHE_CONFIG.get(func_name)
+        config = CacheService.CACHE_CONFIG.get(func_name)
         if not config:
             return None
 
         query_type = config.get("query_type")
-        method_name = YzDataService.QUERY_METHODS.get(func_name)
+        method_name = CacheService.QUERY_METHODS.get(func_name)
         if not method_name:
             return None
 
-        method = getattr(YzDataService, method_name, None)
+        method = getattr(CacheService, method_name, None)
         if not method:
             return None
 
@@ -299,22 +380,26 @@ class YzDataService:
         if not data:
             return None
 
+        # 记录数据血缘 - 来自缓存
+        record_count = len(data) if data else 0
+        CacheService._update_lineage(func_name, params, "cache", record_count)
+
         # 获取字段中文映射并转换
-        return YzDataService._convert_to_chinese(data, func_name)
+        return CacheService._convert_to_chinese(data, func_name)
 
     @staticmethod
     def save_to_local(func_name: str, params: dict, result: dict):
         """保存数据到本地"""
         # 获取接口配置
-        config = YzDataService.CACHE_CONFIG.get(func_name)
+        config = CacheService.CACHE_CONFIG.get(func_name)
         if not config or not config.get("sync"):
             return
 
-        method_name = YzDataService.SAVE_METHODS.get(func_name)
+        method_name = CacheService.SAVE_METHODS.get(func_name)
         if not method_name:
             return
 
-        method = getattr(YzDataService, method_name, None)
+        method = getattr(CacheService, method_name, None)
         if not method:
             return
 
@@ -352,6 +437,10 @@ class YzDataService:
             # 日期范围或最新数据，直接保存
             method(df)
 
+        # 记录数据血缘 - 来自 akshare
+        record_count = len(data) if data else 0
+        CacheService._update_lineage(func_name, params, "akshare", record_count)
+
     # ==================== A股实时行情 ====================
 
     @staticmethod
@@ -359,19 +448,19 @@ class YzDataService:
         """获取A股实时行情 - 优先本地"""
         # 尝试从本地获取
         if not force_refresh:
-            local_data = YzDataService._get_spot_from_local()
+            local_data = CacheService._get_spot_from_local()
             if local_data:
                 logger.info(f"从本地获取实时行情 {len(local_data)} 条")
                 return local_data
 
         # 从 akshare 获取并存储
-        df = YzDataService._fetch_spot_from_akshare()
+        df = CacheService._fetch_spot_from_akshare()
         if df is None or df.empty:
             return []
 
         # 存储到本地
-        YzDataService._save_spot_to_local(df)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_spot_to_local(df)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_spot_from_local() -> Optional[List[Dict]]:
@@ -467,19 +556,19 @@ class YzDataService:
 
         # 尝试从本地获取
         if not force_refresh:
-            local_data = YzDataService._get_limit_up_from_local(target_date)
+            local_data = CacheService._get_limit_up_from_local(target_date)
             if local_data:
                 logger.info(f"从本地获取涨停板 {len(local_data)} 条")
                 return local_data
 
         # 从 akshare 获取
-        df = YzDataService._fetch_limit_up_from_akshare(target_date)
+        df = CacheService._fetch_limit_up_from_akshare(target_date)
         if df is None or df.empty:
             return []
 
         # 存储到本地
-        YzDataService._save_limit_up_to_local(df, target_date)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_limit_up_to_local(df, target_date)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_limit_up_from_local(target_date: date) -> Optional[List[Dict]]:
@@ -567,16 +656,16 @@ class YzDataService:
             target_date = date.today()
 
         if not force_refresh:
-            local_data = YzDataService._get_zt_pool_from_local(target_date)
+            local_data = CacheService._get_zt_pool_from_local(target_date)
             if local_data:
                 return local_data
 
-        df = YzDataService._fetch_zt_pool_from_akshare(target_date)
+        df = CacheService._fetch_zt_pool_from_akshare(target_date)
         if df is None or df.empty:
             return []
 
-        YzDataService._save_zt_pool_to_local(df, target_date)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_zt_pool_to_local(df, target_date)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_zt_pool_from_local(target_date: date) -> Optional[List[Dict]]:
@@ -650,18 +739,18 @@ class YzDataService:
         """获取个股资金流向"""
         # 尝试从本地获取
         if not force_refresh:
-            local_data = YzDataService._get_fund_flow_from_local(stock_code)
+            local_data = CacheService._get_fund_flow_from_local(stock_code)
             if local_data:
                 return local_data
 
         # 从 akshare 获取
-        df = YzDataService._fetch_fund_flow_from_akshare(stock_code, market)
+        df = CacheService._fetch_fund_flow_from_akshare(stock_code, market)
         if df is None or df.empty:
             return []
 
         # 存储到本地
-        YzDataService._save_fund_flow_to_local(df, stock_code)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_fund_flow_to_local(df, stock_code)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_fund_flow_from_local(stock_code: str) -> Optional[List[Dict]]:
@@ -754,16 +843,16 @@ class YzDataService:
         cache_key = f"sector_fund_flow_{indicator}_{sector_type}"
 
         if not force_refresh:
-            local_data = YzDataService._get_sector_fund_flow_from_local(indicator, sector_type)
+            local_data = CacheService._get_sector_fund_flow_from_local(indicator, sector_type)
             if local_data:
                 return local_data
 
-        df = YzDataService._fetch_sector_fund_flow_from_akshare(indicator, sector_type)
+        df = CacheService._fetch_sector_fund_flow_from_akshare(indicator, sector_type)
         if df is None or df.empty:
             return []
 
-        YzDataService._save_sector_fund_flow_to_local(df, indicator, sector_type)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_sector_fund_flow_to_local(df, indicator, sector_type)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_sector_fund_flow_from_local(indicator: str, sector_type: str) -> Optional[List[Dict]]:
@@ -847,16 +936,16 @@ class YzDataService:
             end = date.today()
 
         if not force_refresh:
-            local_data = YzDataService._get_lhb_detail_from_local(start, end)
+            local_data = CacheService._get_lhb_detail_from_local(start, end)
             if local_data:
                 return local_data
 
-        df = YzDataService._fetch_lhb_detail_from_akshare(start, end)
+        df = CacheService._fetch_lhb_detail_from_akshare(start, end)
         if df is None or df.empty:
             return []
 
-        YzDataService._save_lhb_detail_to_local(df)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_lhb_detail_to_local(df)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_lhb_detail_from_local(start: date, end: date) -> Optional[List[Dict]]:
@@ -929,16 +1018,16 @@ class YzDataService:
     def get_lhb_yytj(force_refresh: bool = False) -> List[Dict]:
         """获取龙虎榜游资追踪"""
         if not force_refresh:
-            local_data = YzDataService._get_lhb_yytj_from_local()
+            local_data = CacheService._get_lhb_yytj_from_local()
             if local_data:
                 return local_data
 
-        df = YzDataService._fetch_lhb_yytj_from_akshare()
+        df = CacheService._fetch_lhb_yytj_from_akshare()
         if df is None or df.empty:
             return []
 
-        YzDataService._save_lhb_yytj_to_local(df)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_lhb_yytj_to_local(df)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_lhb_yytj_from_local() -> Optional[List[Dict]]:
@@ -1024,16 +1113,16 @@ class YzDataService:
     def get_lhb_yyb(force_refresh: bool = False) -> List[Dict]:
         """获取龙虎榜营业部"""
         if not force_refresh:
-            local_data = YzDataService._get_lhb_yyb_from_local()
+            local_data = CacheService._get_lhb_yyb_from_local()
             if local_data:
                 return local_data
 
-        df = YzDataService._fetch_lhb_yyb_from_akshare()
+        df = CacheService._fetch_lhb_yyb_from_akshare()
         if df is None or df.empty:
             return []
 
-        YzDataService._save_lhb_yyb_to_local(df)
-        return YzDataService._convert_df_to_records(df)
+        CacheService._save_lhb_yyb_to_local(df)
+        return CacheService._convert_df_to_records(df)
 
     @staticmethod
     def _get_lhb_yyb_from_local() -> Optional[List[Dict]]:

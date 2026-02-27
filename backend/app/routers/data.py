@@ -2529,9 +2529,9 @@ AKSHARE_FUNCTIONS = {
 
 
 # ==================== 缓存配置 ====================
-# 从 yz_data_service 导入缓存配置
-from app.services.yz_data_service import YzDataService
-CACHE_MODELS = YzDataService.CACHE_CONFIG
+# 从 cache_service 导入缓存配置
+from app.services.cache_service import CacheService
+CACHE_MODELS = CacheService.CACHE_CONFIG
 
 # 需要同步到数据库的接口列表
 SYNC_FUNCTIONS = {k for k, v in CACHE_MODELS.items() if v.get("sync")}
@@ -2920,8 +2920,8 @@ class AkshareExecuteRequest(BaseModel):
 
 @router.post("/akshare/execute")
 def execute_akshare_function(request: AkshareExecuteRequest):
-    """执行akshare函数，支持缓存"""
-    from app.services.yz_data_service import YzDataService
+    """执行akshare函数，支持缓存和数据血缘"""
+    from app.services.cache_service import CacheService
 
     func_name = request.func_name
     params = request.params
@@ -2936,22 +2936,33 @@ def execute_akshare_function(request: AkshareExecuteRequest):
     # 有缓存配置且启用缓存
     if cache_config and use_cache:
         # 尝试从本地获取
-        local_result = YzDataService.query_from_local(func_name, params)
+        local_result = CacheService.query_from_local(func_name, params)
         if local_result:
-            return {"source": "cache", **local_result}
+            # 获取血缘信息
+            lineage = CacheService.get_lineage_info(func_name, params)
+            return {"source": "cache", **local_result, "lineage": lineage}
 
         # 无缓存，调用 akshare
         result = _call_akshare(func_name, params)
 
         # 如果需要同步，则存储到数据库
         if cache_config["sync"]:
-            YzDataService.save_to_local(func_name, params, result)
+            CacheService.save_to_local(func_name, params, result)
 
-        return {"source": "akshare", **result}
+        # 获取血缘信息
+        lineage = CacheService.get_lineage_info(func_name, params)
+        return {"source": "akshare", **result, "lineage": lineage}
 
     # 无缓存配置或禁用缓存，直接调用 akshare
     result = _call_akshare(func_name, params)
-    return {"source": "akshare", **result}
+    # 直接调用 akshare 时，血缘来源为 akshare
+    lineage = {
+        "func_name": func_name,
+        "source": "akshare",
+        "last_updated": None,
+        "record_count": len(result.get("data", [])),
+    }
+    return {"source": "akshare", **result, "lineage": lineage}
 
 
 def _call_akshare(func_name: str, params: dict):
@@ -3007,7 +3018,7 @@ def sync_function(
     end_date: Optional[str] = None,
 ):
     """手动同步数据到本地数据库"""
-    from app.services.yz_data_service import YzDataService
+    from app.services.cache_service import CacheService
 
     if func_name not in AKSHARE_FUNCTIONS:
         raise HTTPException(status_code=404, detail=f"函数 {func_name} 不存在")
@@ -3033,7 +3044,7 @@ def sync_function(
         result = _call_akshare(func_name, params)
 
         # 保存到本地
-        YzDataService.save_to_local(func_name, params, result)
+        CacheService.save_to_local(func_name, params, result)
 
         data = result.get("data", [])
         return {"status": "success", "synced": len(data), "func_name": func_name}

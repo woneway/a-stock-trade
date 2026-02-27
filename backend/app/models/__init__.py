@@ -1,3 +1,4 @@
+from app.models.data_lineage import DataLineage
 from app.models.daily import Plan
 from app.models.backtest_strategy import BacktestStrategy
 from app.models.external_data import (
@@ -29,6 +30,7 @@ from app.models.trading import (
 )
 
 __all__ = [
+    "DataLineage",
     "Plan",
     "BacktestStrategy",
     # 外部数据
