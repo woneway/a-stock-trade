@@ -52,6 +52,10 @@ class CacheService:
         "stock_lhb_detail_em": "_get_lhb_detail_from_local",
         "stock_lhb_yytj_sina": "_get_lhb_yytj_from_local",
         "stock_lh_yyb_most": "_get_lhb_yyb_from_local",
+        "stock_board_industry_name_em": "_get_board_industry_from_local",
+        "stock_board_concept_name_em": "_get_board_concept_from_local",
+        "stock_zt_pool_strong_em": "_get_zt_pool_strong_from_local",
+        "stock_zt_pool_previous_em": "_get_zt_pool_previous_from_local",
     }
 
     SAVE_METHODS = {
@@ -63,6 +67,10 @@ class CacheService:
         "stock_lhb_detail_em": "_save_lhb_detail_to_local",
         "stock_lhb_yytj_sina": "_save_lhb_yytj_to_local",
         "stock_lh_yyb_most": "_save_lhb_yyb_to_local",
+        "stock_board_industry_name_em": "_save_board_industry_to_local",
+        "stock_board_concept_name_em": "_save_board_concept_to_local",
+        "stock_zt_pool_strong_em": "_save_zt_pool_strong_to_local",
+        "stock_zt_pool_previous_em": "_save_zt_pool_previous_to_local",
     }
 
     # ==================== 接口配置 ====================
@@ -119,23 +127,27 @@ class CacheService:
             "sync": True,
             "query_type": "latest",
         },
-        # 板块行情
+        # 板块行情 - 暂不缓存，直接从 akshare 获取
         "stock_board_industry_name_em": {
             "model": ExternalBoardIndustry,
-            "sync": True,
-            "query_type": "latest",
+            "sync": False,
+            "query_type": "realtime",
         },
         "stock_board_concept_name_em": {
             "model": ExternalBoardConcept,
-            "sync": True,
-            "query_type": "latest",
+            "sync": False,
+            "query_type": "realtime",
         },
-        # 涨停板池相关
+        # 涨停板池相关 - 暂不缓存
         "stock_zt_pool_strong_em": {
             "model": ExternalZtPoolStrong,
-            "sync": True,
-            "query_type": "date",
-            "date_param": "date",
+            "sync": False,
+            "query_type": "realtime",
+        },
+        "stock_zt_pool_previous_em": {
+            "model": ExternalZtPoolPrevious,
+            "sync": False,
+            "query_type": "realtime",
         },
         "stock_zt_pool_previous_em": {
             "model": ExternalZtPoolPrevious,
