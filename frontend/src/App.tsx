@@ -7,6 +7,7 @@ import Trades from './pages/Trades';
 import StrategyAnalysis from './pages/StrategyAnalysis';
 import Daily from './pages/Daily';
 import DataQuery from './pages/DataQuery';
+import TraderDashboard from './pages/TraderDashboard';
 import './styles/index.css';
 
 function App() {
@@ -28,6 +29,9 @@ function App() {
 
         {/* 数据查询 */}
         <Route path="/data-query" element={<DataQuery />} />
+
+        {/* 游资看板 */}
+        <Route path="/trader-dashboard" element={<TraderDashboard />} />
 
         {/* 设置 */}
         <Route path="/settings" element={<Settings />} />

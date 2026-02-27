@@ -11,6 +11,9 @@ const menuItems: MenuItem[] = [
   // 核心功能
   { path: '/daily', label: '计划与复盘', icon: '📋' },
 
+  // 游资看板
+  { path: '/trader-dashboard', label: '游资看板', icon: '🔥' },
+
   // 持仓与交易
   { path: '/positions', label: '持仓', icon: '💼' },
   { path: '/trades', label: '交易记录', icon: '📜' },

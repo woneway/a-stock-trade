@@ -16,6 +16,36 @@ from app.routers import positions, trades
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
+
+    # 启动时同步交易日历
+    from datetime import datetime, timedelta
+    import threading
+    def sync_trade_calendar_background():
+        try:
+            from app.services.cache_service import CacheService
+
+            # 获取最近一年的交易日历
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
+
+            # 先尝试从本地获取
+            local_data = CacheService._get_trade_calendar_from_local(start_date, end_date)
+            if local_data and len(local_data) > 100:
+                # 本地已有足够的交易日历数据
+                return
+
+            # 从 akshare 获取并保存
+            df = CacheService._fetch_trade_calendar_from_akshare(start_date, end_date)
+            if df is not None and not df.empty:
+                CacheService._save_trade_calendar_to_local(df)
+        except Exception as e:
+            print(f"启动时同步交易日历失败: {e}")
+
+    # 后台运行，不阻塞启动
+    thread = threading.Thread(target=sync_trade_calendar_background)
+    thread.daemon = True
+    thread.start()
+
     yield
 
 
