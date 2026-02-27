@@ -22,6 +22,8 @@ from app.models.external_yz_common import (
     ExternalLhbDetail,
     ExternalLhbYytj,
     ExternalLhbYyb,
+    ExternalBoardIndustry,
+    ExternalBoardConcept,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,6 +114,17 @@ class CacheService:
         },
         "stock_lh_yyb_most": {
             "model": ExternalLhbYyb,
+            "sync": True,
+            "query_type": "latest",
+        },
+        # 板块行情
+        "stock_board_industry_name_em": {
+            "model": ExternalBoardIndustry,
+            "sync": True,
+            "query_type": "latest",
+        },
+        "stock_board_concept_name_em": {
+            "model": ExternalBoardConcept,
             "sync": True,
             "query_type": "latest",
         },

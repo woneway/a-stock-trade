@@ -238,3 +238,51 @@ class ExternalLhbYyb(SQLModel, table=True):
 
     class Config:
         populate_by_name = True
+
+
+class ExternalBoardIndustry(SQLModel, table=True):
+    """行业板块 - stock_board_industry_name_em"""
+    __tablename__ = "external_board_industry"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    board_name: str = Field(index=True, description="板块名称")
+    board_code: Optional[str] = Field(default=None, description="板块代码")
+
+    # 行情数据
+    latest_price: Optional[float] = Field(default=None, description="最新价")
+    change_pct: Optional[float] = Field(default=None, description="涨跌幅")
+    turnover_rate: Optional[float] = Field(default=None, description="换手率")
+    volume: Optional[float] = Field(default=None, description="成交量")
+    amount: Optional[float] = Field(default=None, description="成交额")
+
+    # 主力资金
+    net_main: Optional[float] = Field(default=None, description="主力净流入")
+
+    update_time: Optional[datetime] = Field(default_factory=datetime.now, description="更新时间")
+
+    class Config:
+        populate_by_name = True
+
+
+class ExternalBoardConcept(SQLModel, table=True):
+    """概念板块 - stock_board_concept_name_em"""
+    __tablename__ = "external_board_concept"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    board_name: str = Field(index=True, description="板块名称")
+    board_code: Optional[str] = Field(default=None, description="板块代码")
+
+    # 行情数据
+    latest_price: Optional[float] = Field(default=None, description="最新价")
+    change_pct: Optional[float] = Field(default=None, description="涨跌幅")
+    turnover_rate: Optional[float] = Field(default=None, description="换手率")
+    volume: Optional[float] = Field(default=None, description="成交量")
+    amount: Optional[float] = Field(default=None, description="成交额")
+
+    # 主力资金
+    net_main: Optional[float] = Field(default=None, description="主力净流入")
+
+    update_time: Optional[datetime] = Field(default_factory=datetime.now, description="更新时间")
+
+    class Config:
+        populate_by_name = True

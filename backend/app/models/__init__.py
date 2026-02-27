@@ -21,6 +21,8 @@ from app.models.external_yz_common import (
     ExternalLhbDetail,
     ExternalLhbYytj,
     ExternalLhbYyb,
+    ExternalBoardIndustry,
+    ExternalBoardConcept,
 )
 from app.models.trading import (
     Position,
@@ -52,6 +54,8 @@ __all__ = [
     "ExternalLhbDetail",
     "ExternalLhbYytj",
     "ExternalLhbYyb",
+    "ExternalBoardIndustry",
+    "ExternalBoardConcept",
     # 业务数据 - 持仓/委托/成交
     "Position",
     "Order",
