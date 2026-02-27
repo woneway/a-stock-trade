@@ -183,7 +183,8 @@ class YzDataService:
         """从 akshare 获取涨停板"""
         import akshare as ak
         try:
-            df = ak.stock_zh_a_limit_up_em(date=target_date.strftime("%Y%m%d"))
+            # 使用涨停股池作为涨停板数据
+            df = ak.stock_zt_pool_em(date=target_date.strftime("%Y%m%d"))
             return df
         except Exception as e:
             logger.error(f"获取涨停板失败: {e}")
@@ -193,6 +194,10 @@ class YzDataService:
     def _save_limit_up_to_local(df: pd.DataFrame, target_date: date):
         """保存涨停板到本地"""
         try:
+            if df is None or df.empty:
+                logger.info("涨停板数据为空，跳过保存")
+                return
+
             with Session(engine) as session:
                 session.exec(
                     delete(ExternalLimitUp).where(
@@ -201,20 +206,29 @@ class YzDataService:
                 )
 
                 for _, row in df.iterrows():
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return float(val)
+                        except:
+                            return default
+
                     record = ExternalLimitUp(
                         trade_date=target_date,
-                        code=str(row.get('代码', '')),
-                        name=str(row.get('名称', '')),
-                        close_price=float(row.get('收盘价', 0)) if pd.notna(row.get('收盘价')) else None,
-                        change_pct=float(row.get('涨跌幅', 0)) if pd.notna(row.get('涨跌幅')) else None,
+                        code=str(row.get('代码', '')) if pd.notna(row.get('代码')) else '',
+                        name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
+                        close_price=get_val('收盘价'),
+                        change_pct=get_val('涨跌幅'),
                         reason=str(row.get('涨停原因', '')) if pd.notna(row.get('涨停原因')) else None,
-                        seal_amount=float(row.get('封单金额', 0)) if pd.notna(row.get('封单金额')) else None,
-                        seal_ratio=float(row.get('封比', 0)) if pd.notna(row.get('封比')) else None,
+                        seal_amount=get_val('封单金额'),
+                        seal_ratio=get_val('封比'),
                         open_count=int(row.get('打开次数', 0)) if pd.notna(row.get('打开次数')) else None,
                         first_time=str(row.get('首次涨停时间', '')) if pd.notna(row.get('首次涨停时间')) else None,
                         last_time=str(row.get('最后涨停时间', '')) if pd.notna(row.get('最后涨停时间')) else None,
-                        turnover_rate=float(row.get('换手率', 0)) if pd.notna(row.get('换手率')) else None,
-                        market_cap=float(row.get('总市值', 0)) if pd.notna(row.get('总市值')) else None,
+                        turnover_rate=get_val('换手率'),
+                        market_cap=get_val('总市值'),
                     )
                     session.add(record)
 
@@ -271,20 +285,33 @@ class YzDataService:
     @staticmethod
     def _save_zt_pool_to_local(df: pd.DataFrame, target_date: date):
         try:
+            if df is None or df.empty:
+                logger.info("涨停板池数据为空，跳过保存")
+                return
+
             with Session(engine) as session:
                 session.exec(delete(ExternalZtPool).where(ExternalZtPool.trade_date == target_date))
 
                 for _, row in df.iterrows():
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return float(val)
+                        except:
+                            return default
+
                     record = ExternalZtPool(
                         trade_date=target_date,
-                        code=str(row.get('代码', '')),
-                        name=str(row.get('名称', '')),
-                        close_price=float(row.get('收盘价', 0)) if pd.notna(row.get('收盘价')) else None,
-                        change_pct=float(row.get('涨跌幅', 0)) if pd.notna(row.get('涨跌幅')) else None,
+                        code=str(row.get('代码', '')) if pd.notna(row.get('代码')) else '',
+                        name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
+                        close_price=get_val('收盘价'),
+                        change_pct=get_val('涨跌幅'),
                         reason=str(row.get('涨停原因', '')) if pd.notna(row.get('涨停原因')) else None,
                         first_time=str(row.get('首次涨停时间', '')) if pd.notna(row.get('首次涨停时间')) else None,
-                        seal_amount=float(row.get('封单金额', 0)) if pd.notna(row.get('封单金额')) else None,
-                        turnover_rate=float(row.get('换手率', 0)) if pd.notna(row.get('换手率')) else None,
+                        seal_amount=get_val('封单金额'),
+                        turnover_rate=get_val('换手率'),
                     )
                     session.add(record)
 
@@ -335,8 +362,16 @@ class YzDataService:
     @staticmethod
     def _fetch_fund_flow_from_akshare(stock_code: str, market: str) -> Optional[pd.DataFrame]:
         import akshare as ak
+        # 转换市场参数
+        market_map = {
+            "上海A股": "sh",
+            "深圳A股": "sz",
+            "sh": "sh",
+            "sz": "sz",
+        }
+        ak_market = market_map.get(market, "sh")
         try:
-            df = ak.stock_individual_fund_flow(stock=stock_code, market=market)
+            df = ak.stock_individual_fund_flow(stock=stock_code, market=ak_market)
             return df
         except Exception as e:
             logger.error(f"获取资金流向失败: {e}")
@@ -358,21 +393,28 @@ class YzDataService:
                     if pd.isna(trade_date):
                         continue
 
+                    # 处理列名兼容 - akshare返回的列名可能包含特殊字符
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        return float(val)
+
                     record = ExternalIndividualFundFlow(
                         trade_date=pd.to_datetime(trade_date).date(),
                         code=stock_code,
-                        name=str(row.get('名称', '')),
-                        net_main=float(row.get('主力净流入', 0)) if pd.notna(row.get('主力净流入')) else None,
-                        net_super=float(row.get('超大单净流入', 0)) if pd.notna(row.get('超大单净流入')) else None,
-                        net_big=float(row.get('大单净流入', 0)) if pd.notna(row.get('大单净流入')) else None,
-                        net_mid=float(row.get('中单净流入', 0)) if pd.notna(row.get('中单净流入')) else None,
-                        net_small=float(row.get('小单净流入', 0)) if pd.notna(row.get('小单净流入')) else None,
-                        amount_main=float(row.get('主力成交额', 0)) if pd.notna(row.get('主力成交额')) else None,
-                        amount_super=float(row.get('超大单成交额', 0)) if pd.notna(row.get('超大单成交额')) else None,
-                        amount_big=float(row.get('大单成交额', 0)) if pd.notna(row.get('大单成交额')) else None,
-                        amount_mid=float(row.get('中单成交额', 0)) if pd.notna(row.get('中单成交额')) else None,
-                        amount_small=float(row.get('小单成交额', 0)) if pd.notna(row.get('小单成交额')) else None,
-                        ratio_main=float(row.get('主力净流入占比', 0)) if pd.notna(row.get('主力净流入占比')) else None,
+                        name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
+                        net_main=get_val('主力净流入-净额'),
+                        net_super=get_val('超大单净流入-净额'),
+                        net_big=get_val('大单净流入-净额'),
+                        net_mid=get_val('中单净流入-净额'),
+                        net_small=get_val('小单净流入-净额'),
+                        amount_main=get_val('主力成交额'),
+                        amount_super=get_val('超大单成交额'),
+                        amount_big=get_val('大单成交额'),
+                        amount_mid=get_val('中单成交额'),
+                        amount_small=get_val('小单成交额'),
+                        ratio_main=get_val('主力净流入-净占比'),
                     )
                     session.add(record)
 
@@ -526,20 +568,34 @@ class YzDataService:
     @staticmethod
     def _save_lhb_detail_to_local(df: pd.DataFrame):
         try:
+            if df is None or df.empty:
+                logger.info("龙虎榜详情数据为空，跳过保存")
+                return
+
             with Session(engine) as session:
                 for _, row in df.iterrows():
-                    trade_date = row.get('日期')
+                    # 上榜日 is the trade date
+                    trade_date = row.get('上榜日')
                     if pd.isna(trade_date):
                         continue
 
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return float(val)
+                        except:
+                            return default
+
                     record = ExternalLhbDetail(
-                        trade_date=pd.to_datetime(trade_date).date(),
-                        code=str(row.get('代码', '')),
-                        name=str(row.get('名称', '')),
-                        list_type=str(row.get('上榜原因', '')),
-                        buy_amount=float(row.get('龙虎榜买入金额', 0)) if pd.notna(row.get('龙虎榜买入金额')) else None,
-                        sell_amount=float(row.get('龙虎榜卖出金额', 0)) if pd.notna(row.get('龙虎榜卖出金额')) else None,
-                        net_amount=float(row.get('龙虎榜净买入额', 0)) if pd.notna(row.get('龙虎榜净买入额')) else None,
+                        trade_date=pd.to_datetime(trade_date).date() if isinstance(trade_date, str) else trade_date,
+                        code=str(row.get('代码', '')) if pd.notna(row.get('代码')) else '',
+                        name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
+                        list_type=str(row.get('上榜原因', '')) if pd.notna(row.get('上榜原因')) else '',
+                        buy_amount=get_val('龙虎榜买入额'),
+                        sell_amount=get_val('龙虎榜卖出额'),
+                        net_amount=get_val('龙虎榜净买额'),
                     )
                     session.add(record)
 
@@ -591,19 +647,41 @@ class YzDataService:
     @staticmethod
     def _save_lhb_yytj_to_local(df: pd.DataFrame):
         try:
+            if df is None or df.empty:
+                logger.info("游资追踪数据为空，跳过保存")
+                return
+
             trade_date = date.today()
             with Session(engine) as session:
                 session.exec(delete(ExternalLhbYytj).where(ExternalLhbYytj.trade_date == trade_date))
 
                 for _, row in df.iterrows():
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return float(val)
+                        except:
+                            return default
+
+                    def get_int(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return int(val)
+                        except:
+                            return default
+
                     record = ExternalLhbYytj(
                         trade_date=trade_date,
-                        trader_name=str(row.get('游资名称', '')),
-                        buy_count=int(row.get('买入次数', 0)) if pd.notna(row.get('买入次数')) else None,
-                        buy_amount=float(row.get('买入金额', 0)) if pd.notna(row.get('买入金额')) else None,
-                        buy_avg=float(row.get('平均买入金额', 0)) if pd.notna(row.get('平均买入金额')) else None,
-                        sell_count=int(row.get('卖出次数', 0)) if pd.notna(row.get('卖出次数')) else None,
-                        sell_amount=float(row.get('卖出金额', 0)) if pd.notna(row.get('卖出金额')) else None,
+                        trader_name=str(row.get('营业部名称', '')) if pd.notna(row.get('营业部名称')) else '',
+                        buy_count=get_int('上榜次数'),
+                        buy_amount=get_val('累积购买额'),
+                        buy_avg=None,  # API doesn't provide average
+                        sell_count=get_int('卖出席位数'),
+                        sell_amount=get_val('累积卖出额'),
                     )
                     session.add(record)
 
@@ -655,20 +733,48 @@ class YzDataService:
     @staticmethod
     def _save_lhb_yyb_to_local(df: pd.DataFrame):
         try:
+            if df is None or df.empty:
+                logger.info("龙虎榜营业部数据为空，跳过保存")
+                return
+
             trade_date = date.today()
             with Session(engine) as session:
                 session.exec(delete(ExternalLhbYyb).where(ExternalLhbYyb.trade_date == trade_date))
 
                 for _, row in df.iterrows():
+                    def get_int(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        try:
+                            return int(val)
+                        except:
+                            return default
+
+                    # 处理 "57.60亿" 格式的数字
+                    def parse_amount(val):
+                        if pd.isna(val):
+                            return None
+                        val_str = str(val)
+                        try:
+                            if '亿' in val_str:
+                                return float(val_str.replace('亿', '')) * 100000000
+                            elif '万' in val_str:
+                                return float(val_str.replace('万', '')) * 10000
+                            else:
+                                return float(val_str)
+                        except:
+                            return None
+
                     record = ExternalLhbYyb(
                         trade_date=trade_date,
-                        broker_name=str(row.get('营业部名称', '')),
-                        up_count=int(row.get('上榜次数', 0)) if pd.notna(row.get('上榜次数')) else None,
-                        buy_count=int(row.get('买入次数', 0)) if pd.notna(row.get('买入次数')) else None,
-                        sell_count=int(row.get('卖出次数', 0)) if pd.notna(row.get('卖出次数')) else None,
-                        buy_amount=float(row.get('买入金额', 0)) if pd.notna(row.get('买入金额')) else None,
-                        sell_amount=float(row.get('卖出金额', 0)) if pd.notna(row.get('卖出金额')) else None,
-                        net_amount=float(row.get('净买入金额', 0)) if pd.notna(row.get('净买入金额')) else None,
+                        broker_name=str(row.get('营业部名称', '')) if pd.notna(row.get('营业部名称')) else '',
+                        up_count=get_int('上榜次数'),
+                        buy_count=get_int('买入席位数') if pd.notna(row.get('买入席位数')) else None,
+                        sell_count=get_int('卖出席位数') if pd.notna(row.get('卖出席位数')) else None,
+                        buy_amount=parse_amount(row.get('合计动用资金')),
+                        sell_amount=None,  # API doesn't provide separate sell amount
+                        net_amount=None,  # API doesn't provide net amount
                     )
                     session.add(record)
 
@@ -685,4 +791,6 @@ class YzDataService:
         # 处理列名映射
         df_copy = df.copy()
         df_copy.columns = [str(c) for c in df_copy.columns]
+        # 替换 NaN 值为 None
+        df_copy = df_copy.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
         return df_copy.to_dict('records')
