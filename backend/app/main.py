@@ -11,6 +11,7 @@ from app.routers.backtest_strategy import router as backtest_strategy_router
 from app.routers import optimizer_enhanced
 from app.routers import data
 from app.routers import positions, trades
+from app.routers import akshare
 
 
 @asynccontextmanager
@@ -73,6 +74,7 @@ app.include_router(router_enhanced.router)         # 增强回测
 app.include_router(backtest_strategy_router)       # 自定义策略
 app.include_router(optimizer_enhanced.router)       # 参数优化
 app.include_router(data.router)                # 数据查询
+app.include_router(akshare.router)             # AKShare测试
 
 # 业务数据
 app.include_router(positions.router)               # 持仓管理

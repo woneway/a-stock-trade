@@ -1,6 +1,5 @@
-from .data_service import DataService, get_stock_list
+from .data_service import DataService
 
 __all__ = [
     "DataService",
-    "get_stock_list",
 ]

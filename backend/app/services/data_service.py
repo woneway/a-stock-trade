@@ -1,310 +1,500 @@
 """
 统一数据服务层
-- 优先级：缓存 > 数据库 > akshare
-- 提供股票数据获取、K线同步功能
+- stock_info, stock_kline, stock_kline_minute: 查询数据库
+- 其他方法: 直接调用 provider/akshare 接口
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 from datetime import date, datetime, timedelta
-import pandas as pd
-import logging
-import time
-from functools import lru_cache
-from threading import Lock
-
+import pymysql
 from sqlmodel import Session, select
-from app.database import engine
-from app.models.external_data import ExternalStockBasic, ExternalStockKline
 
-logger = logging.getLogger(__name__)
+from app.models.stock_info import StockInfo
+from app.models.stock_kline import StockKline
+from app.models.stock_kline_minute import StockKlineMinute
 
-
-class DataCache:
-    """简单的内存缓存"""
-
-    def __init__(self, ttl_seconds: int = 300):
-        self._cache: Dict[str, Any] = {}
-        self._timestamps: Dict[str, float] = {}
-        self.ttl_seconds = ttl_seconds
-        self._lock = Lock()
-
-    def get(self, key: str) -> Optional[Any]:
-        with self._lock:
-            if key in self._cache:
-                if time.time() - self._timestamps[key] < self.ttl_seconds:
-                    return self._cache[key]
-                else:
-                    del self._cache[key]
-                    del self._timestamps[key]
-        return None
-
-    def set(self, key: str, value: Any):
-        with self._lock:
-            self._cache[key] = value
-            self._timestamps[key] = time.time()
-
-    def clear(self):
-        with self._lock:
-            self._cache.clear()
-            self._timestamps.clear()
+# astock 数据库连接配置
+ASTOCK_DB_CONFIG = {
+    'host': '127.0.0.1',
+    'port': 13306,
+    'user': 'root',
+    'password': 'asset123456',
+    'database': 'astock',
+    'charset': 'utf8mb4'
+}
 
 
-# 全局缓存实例
-_data_cache = DataCache(ttl_seconds=300)  # 5分钟缓存
+def _get_astock_conn():
+    """获取astock数据库连接"""
+    return pymysql.connect(**ASTOCK_DB_CONFIG)
 
 
 class DataService:
     """统一数据服务"""
 
+    # ============ 数据库查询方法 ============
+
     @staticmethod
-    def get_kline_dataframe(
-        stock_code: str,
-        start_date: str,
-        end_date: str,
-        force_refresh: bool = False
-    ) -> pd.DataFrame:
+    def stock_info(code: str = None, limit: int = 100) -> List[StockInfo]:
         """
-        获取K线数据
-        优先级：缓存 > 数据库 > akshare
+        查询股票基本信息
+
+        Args:
+            code: 股票代码，不传则返回所有
+            limit: 返回数量限制
+
+        Returns:
+            股票信息列表
         """
-        cache_key = f"kline:{stock_code}:{start_date}:{end_date}"
+        conn = _get_astock_conn()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-        # 1. 尝试从缓存获取
-        if not force_refresh:
-            cached = _data_cache.get(cache_key)
-            if cached is not None:
-                logger.info(f"从缓存获取 {stock_code} K线数据")
-                return cached
-
-        # 2. 尝试从数据库获取
-        df = DataService._get_from_database(stock_code, start_date, end_date)
-        if df is not None and len(df) > 10:
-            logger.info(f"从数据库获取 {stock_code} K线数据: {len(df)}条")
-            _data_cache.set(cache_key, df)
-            return df
-
-        # 3. 从akshare获取并同步到数据库
-        logger.info(f"从akshare获取 {stock_code} K线数据")
-        df = DataService._fetch_from_akshare(stock_code, start_date, end_date)
-        if df is not None and len(df) > 0:
-            # 异步保存到数据库（不阻塞返回）
-            DataService._async_save_to_database(stock_code, df)
-            _data_cache.set(cache_key, df)
-
-        return df
-
-    @staticmethod
-    def _get_from_database(
-        stock_code: str,
-        start_date: str,
-        end_date: str
-    ) -> Optional[pd.DataFrame]:
-        """从数据库获取K线数据"""
-        try:
-            with Session(engine) as session:
-                stock = session.exec(
-                    select(ExternalStockBasic).where(ExternalStockBasic.code == stock_code)
-                ).first()
-
-                if not stock:
-                    return None
-
-                klines = session.exec(
-                    select(ExternalStockKline).where(
-                        ExternalStockKline.stock_id == stock.id,
-                        ExternalStockKline.trade_date >= start_date,
-                        ExternalStockKline.trade_date <= end_date,
-                    ).order_by(ExternalStockKline.trade_date.asc())
-                ).all()
-
-                if not klines:
-                    return None
-
-                data = []
-                for k in klines:
-                    data.append({
-                        'Open': k.open or 0,
-                        'High': k.high or 0,
-                        'Low': k.low or 0,
-                        'Close': k.close or 0,
-                        'Volume': k.volume or 0,
-                    })
-
-                return pd.DataFrame(data)
-        except Exception as e:
-            logger.warning(f"从数据库获取失败: {e}")
-            return None
-
-    @staticmethod
-    def _fetch_from_akshare(
-        stock_code: str,
-        start_date: str,
-        end_date: str,
-        max_retries: int = 3
-    ) -> Optional[pd.DataFrame]:
-        """从akshare获取K线数据"""
-        import akshare as ak
-
-        # 转换代码格式
-        if stock_code.startswith('sh') or stock_code.startswith('sz'):
-            symbol = stock_code
-        elif stock_code.startswith('6'):
-            symbol = f"sh{stock_code}"
+        if code:
+            cursor.execute("SELECT * FROM stock_info WHERE code = %s LIMIT %s", (code, limit))
         else:
-            symbol = f"sz{stock_code}"
+            cursor.execute("SELECT * FROM stock_info LIMIT %s", (limit,))
 
-        # 转换日期格式
-        start_str = start_date.replace('-', '')
-        end_str = end_date.replace('-', '')
+        results = cursor.fetchall()
+        conn.close()
 
-        for attempt in range(max_retries):
-            try:
-                df = ak.stock_zh_a_hist(
-                    symbol=symbol,
-                    period="daily",
-                    start_date=start_str,
-                    end_date=end_str,
-                    adjust="qfq"
-                )
-
-                if df is None or df.empty:
-                    logger.warning(f"akshare返回空数据: {stock_code}")
-                    return None
-
-                result = pd.DataFrame()
-                result['Open'] = df['开盘'].astype(float)
-                result['High'] = df['最高'].astype(float)
-                result['Low'] = df['最低'].astype(float)
-                result['Close'] = df['收盘'].astype(float)
-                result['Volume'] = df['成交量'].astype(float)
-
-                return result
-
-            except Exception as e:
-                logger.warning(f"akshare获取失败 (尝试 {attempt + 1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2)  # 等待后重试
-
-        return None
+        return [StockInfo(**r) for r in results]
 
     @staticmethod
-    def _async_save_to_database(stock_code: str, df: pd.DataFrame):
-        """异步保存到数据库"""
-        import threading
-        thread = threading.Thread(
-            target=DataService._save_to_database,
-            args=(stock_code, df)
-        )
-        thread.daemon = True
-        thread.start()
-
-    @staticmethod
-    def _save_to_database(stock_code: str, df: pd.DataFrame):
-        """保存到数据库"""
-        try:
-            with Session(engine) as session:
-                # 获取或创建股票
-                stock = session.exec(
-                    select(ExternalStockBasic).where(ExternalStockBasic.code == stock_code)
-                ).first()
-
-                if not stock:
-                    # 根据代码判断市场
-                    if stock_code.startswith('6'):
-                        market = 'sh'
-                        exchange = 'SSE'
-                    else:
-                        market = 'sz'
-                        exchange = 'SZSE'
-
-                    stock = ExternalStockBasic(
-                        code=stock_code,
-                        code_full=f"{market}.{stock_code}",
-                        name=f"股票{stock_code}",
-                        market=market,
-                        exchange=exchange,
-                        list_status='L'
-                    )
-                    session.add(stock)
-                    session.commit()
-                    session.refresh(stock)
-
-                # 保存K线数据
-                from datetime import datetime as dt
-                for _, row in df.iterrows():
-                    # 检查是否已存在
-                    trade_date = row.get('date')
-                    if isinstance(trade_date, str):
-                        trade_date = dt.strptime(trade_date, '%Y-%m-%d').date()
-                    elif hasattr(trade_date, 'date'):
-                        trade_date = trade_date.date()
-
-                    existing = session.exec(
-                        select(ExternalStockKline).where(
-                            ExternalStockKline.stock_id == stock.id,
-                            ExternalStockKline.trade_date == trade_date
-                        )
-                    ).first()
-
-                    if existing:
-                        continue
-
-                    kline = ExternalStockKline(
-                        stock_id=stock.id,
-                        trade_date=trade_date,
-                        open=row['Open'],
-                        high=row['High'],
-                        low=row['Low'],
-                        close=row['Close'],
-                        volume=row['Volume'],
-                    )
-                    session.add(kline)
-
-                session.commit()
-                logger.info(f"已保存 {stock_code} {len(df)} 条K线数据到数据库")
-
-        except Exception as e:
-            logger.error(f"保存到数据库失败: {e}")
-
-    @staticmethod
-    def sync_stock_to_database(
+    def stock_kline(
         stock_code: str,
-        start_date: str,
-        end_date: str
-    ) -> Dict[str, Any]:
-        """同步股票数据到数据库"""
-        df = DataService._fetch_from_akshare(stock_code, start_date, end_date)
-        if df is None or len(df) == 0:
-            return {"status": "error", "message": "获取数据失败"}
+        start_date: str = None,
+        end_date: str = None,
+        limit: int = 1000
+    ) -> List[StockKline]:
+        """
+        查询日K线数据
 
-        DataService._save_to_database(stock_code, df)
-        return {"status": "success", "count": len(df)}
+        Args:
+            stock_code: 股票代码
+            start_date: 开始日期，格式 YYYYMMDD
+            end_date: 结束日期，格式 YYYYMMDD
+            limit: 返回数量限制
+
+        Returns:
+            K线数据列表
+        """
+        conn = _get_astock_conn()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+        query = "SELECT * FROM stock_kline WHERE stock_code = %s"
+        params = [stock_code]
+
+        if start_date:
+            query += " AND trade_date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND trade_date <= %s"
+            params.append(end_date)
+
+        query += " ORDER BY trade_date DESC LIMIT %s"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        return [StockKline(**r) for r in results]
 
     @staticmethod
-    def clear_cache():
-        """清除缓存"""
-        _data_cache.clear()
+    def stock_kline_minute(
+        stock_code: str,
+        trade_date: str = None,
+        limit: int = 1000
+    ) -> List[StockKlineMinute]:
+        """
+        查询分时数据
 
+        Args:
+            stock_code: 股票代码
+            trade_date: 交易日期，格式 YYYYMMDD
+            limit: 返回数量限制
 
-def get_stock_list() -> List[Dict[str, str]]:
-    """获取股票列表"""
-    cache_key = "stock_list"
-    cached = _data_cache.get(cache_key)
-    if cached:
-        return cached
+        Returns:
+            分时数据列表
+        """
+        conn = _get_astock_conn()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    try:
-        with Session(engine) as session:
-            stocks = session.exec(
-                select(ExternalStockBasic).limit(100)
-            ).all()
+        query = "SELECT * FROM stock_kline_minute WHERE stock_code = %s"
+        params = [stock_code]
 
-            result = [
-                {"code": s.code, "name": s.name, "market": s.market}
-                for s in stocks
-            ]
+        if trade_date:
+            query += " AND trade_date = %s"
+            params.append(trade_date)
 
-            _data_cache.set(cache_key, result)
-            return result
-    except Exception as e:
-        logger.error(f"获取股票列表失败: {e}")
-        return []
+        query += " ORDER BY time_minute ASC LIMIT %s"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        return [StockKlineMinute(**r) for r in results]
+
+    # ============ AKShare 接口方法 ============
+
+    @staticmethod
+    def get_stock_info_a_code_name() -> List[Any]:
+        """
+        获取股票代码名称映射
+
+        Returns:
+            股票代码列表
+        """
+        from app.provider.akshare import get_stock_info_a_code_name
+        return get_stock_info_a_code_name()
+
+    @staticmethod
+    def get_stock_individual_info_em(symbol: str) -> List[Any]:
+        """
+        获取个股基本信息
+
+        Args:
+            symbol: 股票代码
+
+        Returns:
+            个股信息
+        """
+        from app.provider.akshare import get_stock_individual_info_em
+        return get_stock_individual_info_em(symbol=symbol)
+
+    @staticmethod
+    def get_lhb_detail_em(start_date: str, end_date: str) -> List[Any]:
+        """
+        获取龙虎榜详情
+
+        Args:
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            龙虎榜详情列表
+        """
+        from app.provider.akshare import get_lhb_detail_em
+        return get_lhb_detail_em(start_date=start_date, end_date=end_date)
+
+    @staticmethod
+    def get_lhb_yybph_em(symbol: str = "近一月") -> List[Any]:
+        """
+        获取营业部排行
+
+        Args:
+            symbol: 统计周期
+
+        Returns:
+            营业部排行列表
+        """
+        from app.provider.akshare import get_lhb_yybph_em
+        return get_lhb_yybph_em(symbol=symbol)
+
+    @staticmethod
+    def get_lhb_stock_statistic_em(symbol: str = "近一月") -> List[Any]:
+        """
+        获取个股上榜统计
+
+        Args:
+            symbol: 统计周期
+
+        Returns:
+            个股上榜统计列表
+        """
+        from app.provider.akshare import get_lhb_stock_statistic_em
+        return get_lhb_stock_statistic_em(symbol=symbol)
+
+    @staticmethod
+    def get_lhb_stock_detail_em(symbol: str, date: str, flag: str = "买入") -> List[Any]:
+        """
+        获取个股龙虎榜详情
+
+        Args:
+            symbol: 股票代码
+            date: 日期
+            flag: 类型
+
+        Returns:
+            龙虎榜详情列表
+        """
+        from app.provider.akshare import get_lhb_stock_detail_em
+        return get_lhb_stock_detail_em(symbol=symbol, date=date, flag=flag)
+
+    @staticmethod
+    def get_stock_zh_a_hist(
+        symbol: str,
+        start_date: str,
+        end_date: str,
+        period: str = "daily",
+        adjust: str = ""
+    ) -> List[Any]:
+        """
+        获取日K线数据
+
+        Args:
+            symbol: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+            period: 周期
+            adjust: 复权类型
+
+        Returns:
+            K线数据列表
+        """
+        from app.provider.akshare import get_stock_zh_a_hist
+        return get_stock_zh_a_hist(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            period=period,
+            adjust=adjust
+        )
+
+    @staticmethod
+    def get_stock_zh_a_hist_min_em(
+        symbol: str,
+        period: str = "5",
+        start_date: str = None,
+        end_date: str = None
+    ) -> List[Any]:
+        """
+        获取分时K线数据
+
+        Args:
+            symbol: 股票代码
+            period: 周期
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            分时数据列表
+        """
+        from app.provider.akshare import get_stock_zh_a_hist_min_em
+        return get_stock_zh_a_hist_min_em(
+            symbol=symbol,
+            period=period,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+    @staticmethod
+    def get_market_fund_flow() -> List[Any]:
+        """
+        获取大盘资金流向
+
+        Returns:
+            资金流向列表
+        """
+        from app.provider.akshare import get_market_fund_flow
+        return get_market_fund_flow()
+
+    @staticmethod
+    def get_sector_fund_flow_rank(
+        indicator: str = "今日",
+        sector_type: str = "行业资金流"
+    ) -> List[Any]:
+        """
+        获取板块资金流排名
+
+        Args:
+            indicator: 时间范围
+            sector_type: 板块类型
+
+        Returns:
+            板块资金流列表
+        """
+        from app.provider.akshare import get_sector_fund_flow_rank
+        return get_sector_fund_flow_rank(indicator=indicator, sector_type=sector_type)
+
+    @staticmethod
+    def get_individual_fund_flow_rank(indicator: str = "今日") -> List[Any]:
+        """
+        获取个股资金流排名
+
+        Args:
+            indicator: 时间范围
+
+        Returns:
+            个股资金流列表
+        """
+        from app.provider.akshare import get_individual_fund_flow_rank
+        return get_individual_fund_flow_rank(indicator=indicator)
+
+    @staticmethod
+    def get_individual_fund_flow(stock: str, market: str = "sz") -> List[Any]:
+        """
+        获取个股资金流向
+
+        Args:
+            stock: 股票代码
+            market: 市场
+
+        Returns:
+            资金流列表
+        """
+        from app.provider.akshare import get_individual_fund_flow
+        return get_individual_fund_flow(stock=stock, market=market)
+
+    @staticmethod
+    def get_zt_pool_em(date: str) -> List[Any]:
+        """
+        获取涨停股池
+
+        Args:
+            date: 日期
+
+        Returns:
+            涨停股列表
+        """
+        from app.provider.akshare import get_zt_pool_em
+        return get_zt_pool_em(date=date)
+
+    @staticmethod
+    def get_zt_pool_previous_em(date: str) -> List[Any]:
+        """
+        获取昨日涨停
+
+        Args:
+            date: 日期
+
+        Returns:
+            昨日涨停列表
+        """
+        from app.provider.akshare import get_zt_pool_previous_em
+        return get_zt_pool_previous_em(date=date)
+
+    @staticmethod
+    def get_zt_pool_dtgc_em(date: str) -> List[Any]:
+        """
+        获取跌停股池
+
+        Args:
+            date: 日期
+
+        Returns:
+            跌停股列表
+        """
+        from app.provider.akshare import get_zt_pool_dtgc_em
+        return get_zt_pool_dtgc_em(date=date)
+
+    @staticmethod
+    def get_zt_pool_zbgc_em(date: str) -> List[Any]:
+        """
+        获取炸板股池
+
+        Args:
+            date: 日期
+
+        Returns:
+            炸板股列表
+        """
+        from app.provider.akshare import get_zt_pool_zbgc_em
+        return get_zt_pool_zbgc_em(date=date)
+
+    @staticmethod
+    def get_margin_sse(start_date: str, end_date: str) -> List[Any]:
+        """
+        获取上交所融资融券
+
+        Args:
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            融资融券列表
+        """
+        from app.provider.akshare import get_margin_sse
+        return get_margin_sse(start_date=start_date, end_date=end_date)
+
+    @staticmethod
+    def get_margin_szse(date: str) -> List[Any]:
+        """
+        获取深交所融资融券
+
+        Args:
+            date: 日期
+
+        Returns:
+            融资融券列表
+        """
+        from app.provider.akshare import get_margin_szse
+        return get_margin_szse(date=date)
+
+    @staticmethod
+    def get_margin_account_info() -> List[Any]:
+        """
+        获取两融账户统计
+
+        Returns:
+            两融账户统计列表
+        """
+        from app.provider.akshare import get_margin_account_info
+        return get_margin_account_info()
+
+    @staticmethod
+    def get_dzjy_mrmx(symbol: str, start_date: str, end_date: str) -> List[Any]:
+        """
+        获取大宗交易明细
+
+        Args:
+            symbol: 类型
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            大宗交易列表
+        """
+        from app.provider.akshare import get_dzjy_mrmx
+        return get_dzjy_mrmx(symbol=symbol, start_date=start_date, end_date=end_date)
+
+    @staticmethod
+    def get_dzjy_mrtj(start_date: str, end_date: str) -> List[Any]:
+        """
+        获取大宗交易统计
+
+        Args:
+            start_date: 开始日期
+            end_date: 结束日期
+
+        Returns:
+            大宗交易统计列表
+        """
+        from app.provider.akshare import get_dzjy_mrtj
+        return get_dzjy_mrtj(start_date=start_date, end_date=end_date)
+
+    @staticmethod
+    def get_market_activity_legu() -> List[Any]:
+        """
+        获取赚钱效应分析
+
+        Returns:
+            赚钱效应列表
+        """
+        from app.provider.akshare import get_market_activity_legu
+        return get_market_activity_legu()
+
+    @staticmethod
+    def get_a_high_low_statistics(symbol: str = "all") -> List[Any]:
+        """
+        获取创新高/新低
+
+        Args:
+            symbol: 市场
+
+        Returns:
+            创新高/新低列表
+        """
+        from app.provider.akshare import get_a_high_low_statistics
+        return get_a_high_low_statistics(symbol=symbol)
+
+    @staticmethod
+    def get_hot_rank_em() -> List[Any]:
+        """
+        获取股票热度排名
+
+        Returns:
+            热度排名列表
+        """
+        from app.provider.akshare import get_hot_rank_em
+        return get_hot_rank_em()
