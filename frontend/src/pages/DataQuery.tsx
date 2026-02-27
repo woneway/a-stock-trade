@@ -24,61 +24,294 @@ interface QueryResult {
   function?: string;
 }
 
-interface SyncStatus {
-  stock_basic_count: number;
-  stock_quote_count: number;
-  stock_kline_count: number;
-}
-
 export default function DataQuery() {
-  const [activeTab, setActiveTab] = useState<'query' | 'sync'>('query');
-
-  // 查询相关状态
-  const [categories, setCategories] = useState<Record<string, { name: string; description: string }[]>>({});
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedFunction, setSelectedFunction] = useState<string>('');
+  const [selectedFunction, setSelectedFunction] = useState<string>('stock_zh_a_spot_em');
   const [functionDetail, setFunctionDetail] = useState<AkshareFunction | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
-
-  // 搜索相关
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<AkshareFunction[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
 
-  // 同步相关状态
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string>('');
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [syncForm, setSyncForm] = useState({
-    startDate: '',
-    endDate: '',
-    stockCodes: '',
-  });
+  // 游资常用分类
+  const categories = useMemo(() => [
+    {
+      name: '游资必看',
+      icon: '🔥',
+      items: [
+        { name: 'stock_zh_a_spot_em', desc: '实时行情' },
+        { name: 'stock_zh_a_new_em', desc: '新股实时行情' },
+        { name: 'stock_zh_a_limit_up_em', desc: '涨停板' },
+        { name: 'stock_zh_a_limit_down_em', desc: '跌停板' },
+        { name: 'stock_zt_pool_em', desc: '涨停板池' },
+        { name: 'stock_zt_pool_strong_em', desc: '涨停板池-强势' },
+        { name: 'stock_zt_pool_dtgc_em', desc: '涨停池-龙头股' },
+        { name: 'stock_zt_pool_previous_em', desc: '昨日涨停池' },
+        { name: 'stock_sector_fund_flow_rank', desc: '板块资金流向' },
+        { name: 'stock_individual_fund_flow', desc: '个股资金流向' },
+        { name: 'stock_lhb_detail_em', desc: '龙虎榜详情' },
+        { name: 'stock_lh_yyb_most', desc: '龙虎榜营业部' },
+        { name: 'stock_board_industry_name_em', desc: '行业板块' },
+        { name: 'stock_board_concept_name_em', desc: '概念板块' },
+      ]
+    },
+    {
+      name: '行情数据',
+      icon: '📊',
+      items: [
+        { name: 'stock_zh_a_hist', desc: '历史K线' },
+        { name: 'stock_zh_a_minute', desc: '分时数据' },
+        { name: 'stock_zh_a_hist_min_em', desc: '分时历史数据' },
+        { name: 'stock_zh_index_daily_em', desc: '指数日K' },
+        { name: 'stock_zh_index_spot_em', desc: '指数实时' },
+        { name: 'stock_zh_a_treda', desc: '市场总貌(上海)' },
+        { name: 'stock_zh_a_tredb', desc: '市场总貌(深圳)' },
+        { name: 'stock_zh_a_trade', desc: '市场交易数据' },
+      ]
+    },
+    {
+      name: '资金流向',
+      icon: '💰',
+      items: [
+        { name: 'stock_fund_flow', desc: '大盘资金流向' },
+        { name: 'stock_market_fund_flow', desc: '市场资金流向' },
+        { name: 'stock_sector_fund_flow_rank', desc: '板块资金排名' },
+        { name: 'stock_individual_fund_flow', desc: '个股资金流向' },
+        { name: 'stock_individual_fund_flow_rank', desc: '个股资金流向排名' },
+        { name: 'stock_individual_fund_flow_stick', desc: '个股资金流向(多日)' },
+        { name: 'stock_fund_flow_big_deal', desc: '大单交易' },
+        { name: 'stock_hsgt_hist_em', desc: '沪深港通历史' },
+        { name: 'stock_hsgt_fund_flow_summary_em', desc: '沪深港通资金汇总' },
+      ]
+    },
+    {
+      name: '龙虎榜',
+      icon: '🐯',
+      items: [
+        { name: 'stock_lhb_detail_em', desc: '龙虎榜详情' },
+        { name: 'stock_lh_yyb_most', desc: '营业部排行' },
+        { name: 'stock_lh_yyb_capital', desc: '资金实力' },
+        { name: 'stock_lhb_hyyyb_em', desc: '活跃营业部' },
+        { name: 'stock_lhb_yybph_em', desc: '营业部排行(新版)' },
+        { name: 'stock_lhb_jgzz_sina', desc: '机构席位' },
+        { name: 'stock_lhb_stock_detail_em', desc: '龙虎榜个股明细' },
+        { name: 'stock_lhb_stock_statistic_em', desc: '龙虎榜股票统计' },
+      ]
+    },
+    {
+      name: '涨跌停',
+      icon: '🚀',
+      items: [
+        { name: 'stock_zh_a_limit_up_em', desc: '涨停板' },
+        { name: 'stock_zh_a_limit_down_em', desc: '跌停板' },
+        { name: 'stock_zt_pool_em', desc: '涨停板池' },
+        { name: 'stock_zt_pool_strong_em', desc: '涨停板池-强势' },
+        { name: 'stock_zt_pool_dtgc_em', desc: '涨停池-龙头股' },
+        { name: 'stock_zt_pool_zbgc_em', desc: '涨停池-炸板股' },
+        { name: 'stock_zt_pool_previous_em', desc: '昨日涨停池' },
+        { name: 'stock_zt_pool_sub_new_em', desc: '涨停池-次新股' },
+        { name: 'stock_zh_a_limit_up_sina', desc: '涨停板(新浪)' },
+      ]
+    },
+    {
+      name: '板块轮动',
+      icon: '🔄',
+      items: [
+        { name: 'stock_board_industry_name_em', desc: '行业板块' },
+        { name: 'stock_board_concept_name_em', desc: '概念板块' },
+        { name: 'stock_board_industry_spot_em', desc: '行业板块行情' },
+        { name: 'stock_board_concept_spot_em', desc: '概念板块行情' },
+        { name: 'stock_board_change_em', desc: '板块涨跌排行' },
+        { name: 'stock_board_industry_cons_em', desc: '行业成分股' },
+        { name: 'stock_board_concept_cons_em', desc: '概念成分股' },
+        { name: 'stock_board_industry_hist_em', desc: '行业板块历史' },
+        { name: 'stock_board_concept_hist_em', desc: '概念板块历史' },
+      ]
+    },
+    {
+      name: '财务数据',
+      icon: '📈',
+      items: [
+        { name: 'stock_financial_abstract', desc: '财务摘要' },
+        { name: 'stock_financial_analysis_indicator', desc: '财务分析指标' },
+        { name: 'stock_yjbb_em', desc: '业绩报表' },
+        { name: 'stock_yjkb_em', desc: '业绩快报' },
+        { name: 'stock_yjyg_em', desc: '业绩预告' },
+        { name: 'stock_fh_em', desc: '分红送转' },
+        { name: 'stock_fhps_em', desc: '分红送配' },
+        { name: 'stock_gpwy_em', desc: '股本演变' },
+        { name: 'stock_yysj_em', desc: '营业数据' },
+      ]
+    },
+    {
+      name: '融资融券',
+      icon: '💳',
+      items: [
+        { name: 'stock_rzrq_em', desc: '融资融券' },
+        { name: 'stock_rzrq_detail_em', desc: '融资融券明细' },
+        { name: 'stock_rzrq_fund_flow', desc: '融资融券资金流向' },
+        { name: 'stock_rzrq_latest', desc: '融资融券最新' },
+      ]
+    },
+    {
+      name: '沪深港通',
+      icon: '🌏',
+      items: [
+        { name: 'stock_hsgt_hist_em', desc: '沪深港通历史' },
+        { name: 'stock_hsgt_em', desc: '沪深港通持股' },
+        { name: 'stock_hsgt_sse_sgt_em', desc: '沪深港通持股标的' },
+        { name: 'stock_hsgt_individual_em', desc: '沪深港通个人持股' },
+        { name: 'stock_hsgt_hold_stock_em', desc: '沪深港通持股股票' },
+        { name: 'stock_hsgt_board_rank_em', desc: '沪深港通板块排名' },
+        { name: 'stock_hsgt_fund_flow_summary_em', desc: '沪深港通资金流向' },
+        { name: 'stock_hsgt_stock_statistics_em', desc: '沪深港通股票统计' },
+      ]
+    },
+    {
+      name: '基础信息',
+      icon: '📋',
+      items: [
+        { name: 'stock_info_a_code_name', desc: '股票列表' },
+        { name: 'stock_info_sh_name_code', desc: '上交所股票' },
+        { name: 'stock_info_sz_name_code', desc: '深交所股票' },
+        { name: 'stock_info_change_name', desc: '股票更名' },
+        { name: 'stock_info_cjzc_em', desc: '筹码分布' },
+        { name: 'stock_ipo_info', desc: '新股上市信息' },
+        { name: 'stock_ipo_declare_em', desc: '新股申报信息' },
+        { name: 'stock_zh_index_cons', desc: '指数成分' },
+        { name: 'stock_info_sh_delist', desc: '退市股票(上海)' },
+        { name: 'stock_info_sz_delist', desc: '退市股票(深圳)' },
+      ]
+    },
+    {
+      name: '资讯公告',
+      icon: '📰',
+      items: [
+        { name: 'stock_news_em', desc: '股票新闻' },
+        { name: 'stock_notice_em', desc: '股票公告' },
+        { name: 'stock_jgzy_em', desc: '机构调研' },
+      ]
+    },
+    {
+      name: '多市场行情',
+      icon: '🌐',
+      items: [
+        { name: 'stock_sz_a_spot_em', desc: '深市A股' },
+        { name: 'stock_sh_a_spot_em', desc: '沪市A股' },
+        { name: 'stock_cy_a_spot_em', desc: '创业板' },
+        { name: 'stock_kc_a_spot_em', desc: '科创板' },
+        { name: 'stock_bj_a_spot_em', desc: '北交所' },
+        { name: 'stock_new_a_spot_em', desc: '新股' },
+        { name: 'stock_zh_a_st_em', desc: 'ST股' },
+        { name: 'stock_zh_a_stop_em', desc: '退市股' },
+      ]
+    },
+    {
+      name: '宏观数据',
+      icon: '🏛️',
+      items: [
+        { name: 'macro_china_gdp', desc: '中国GDP' },
+        { name: 'macro_china_cpi', desc: '中国CPI' },
+        { name: 'macro_china_ppi', desc: '中国PPI' },
+        { name: 'macro_china_m2', desc: '中国M2' },
+        { name: 'macro_china_stock_market_cap', desc: '股市市值' },
+        { name: 'macro_china_trade', desc: '贸易数据' },
+        { name: 'macro_china_fdi', desc: 'FDI数据' },
+        { name: 'macro_china_bank_financing', desc: '社会融资' },
+      ]
+    },
+    {
+      name: '基金',
+      icon: '📊',
+      items: [
+        { name: 'fund_etf_spot_em', desc: 'ETF实时行情' },
+        { name: 'fund_etf_hist_em', desc: 'ETF历史数据' },
+        { name: 'fund_open_fund_daily_em', desc: '开放式基金净值' },
+        { name: 'fund_open_fund_info_em', desc: '开放式基金列表' },
+        { name: 'fund_money_fund_daily_em', desc: '货币基金净值' },
+        { name: 'fund_fh_em', desc: '基金分红' },
+        { name: 'fund_manager_em', desc: '基金经理' },
+        { name: 'fund_portfolio_hold_em', desc: '基金持仓' },
+      ]
+    },
+    {
+      name: '期货',
+      icon: '📉',
+      items: [
+        { name: 'futures_zh_spot', desc: '期货实时行情' },
+        { name: 'futures_zh_realtime', desc: '期货实时数据' },
+        { name: 'futures_hist_em', desc: '期货历史数据' },
+        { name: 'futures_comm_info', desc: '期货品种信息' },
+        { name: 'futures_contract_info_cffex', desc: '中金所合约' },
+        { name: 'futures_contract_info_shfe', desc: '上期所合约' },
+        { name: 'futures_contract_info_dce', desc: '大商所合约' },
+        { name: 'futures_contract_info_czce', desc: '郑商所合约' },
+      ]
+    },
+    {
+      name: '期权',
+      icon: '🎯',
+      items: [
+        { name: 'option_current_day_sse', desc: '上证期权行情' },
+        { name: 'option_current_day_szse', desc: '深证期权行情' },
+        { name: 'option_sse_list_sina', desc: '期权标的列表' },
+        { name: 'option_comm_symbol', desc: '期权合约代码' },
+      ]
+    },
+    {
+      name: '债券',
+      icon: '📑',
+      items: [
+        { name: 'bond_zh_hs_spot', desc: '沪深债券行情' },
+        { name: 'bond_zh_hs_daily', desc: '沪深债券日K' },
+        { name: 'bond_zh_cov', desc: '可转债列表' },
+        { name: 'bond_cb_jsl', desc: '可转债(集思录)' },
+      ]
+    },
+    {
+      name: '外汇',
+      icon: '💱',
+      items: [
+        { name: 'forex_spot_em', desc: '外汇实时行情' },
+        { name: 'forex_hist_em', desc: '外汇历史数据' },
+        { name: 'forex_zh_spot', desc: '外汇实时(人民币)' },
+      ]
+    },
+    {
+      name: '港股',
+      icon: '🏢',
+      items: [
+        { name: 'stock_hk_spot_em', desc: '港股实时行情' },
+        { name: 'stock_hk_daily', desc: '港股日K线' },
+        { name: 'stock_hk_index_spot_em', desc: '港股指数行情' },
+      ]
+    },
+    {
+      name: '美股',
+      icon: '🇺🇸',
+      items: [
+        { name: 'stock_us_spot_em', desc: '美股实时行情' },
+        { name: 'stock_us_daily', desc: '美股日K线' },
+      ]
+    },
+  ], []);
+
+  // 过滤函数
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    const q = searchQuery.toLowerCase();
+    return categories.map(cat => ({
+      ...cat,
+      items: cat.items.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        item.desc.toLowerCase().includes(q)
+      )
+    })).filter(cat => cat.items.length > 0);
+  }, [categories, searchQuery]);
 
   useEffect(() => {
-    fetchCategories();
-    fetchSyncStatus();
+    fetchFunctionDetail(selectedFunction);
   }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await axios.get('/api/data/akshare/categories');
-      setCategories(res.data);
-      // 默认选择第一个分类
-      const firstCat = Object.keys(res.data)[0];
-      if (firstCat) {
-        setSelectedCategory(firstCat);
-        if (res.data[firstCat].length > 0) {
-          setSelectedFunction(res.data[firstCat][0].name);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-    }
-  };
 
   const fetchFunctionDetail = async (funcName: string) => {
     try {
@@ -92,125 +325,22 @@ export default function DataQuery() {
     }
   };
 
-  // 搜索函数
-  useEffect(() => {
-    const searchFunctions = async () => {
-      if (searchQuery.trim().length < 1) {
-        setSearchResults([]);
-        setShowSearchResults(false);
-        return;
-      }
-
-      try {
-        const res = await axios.get(`/api/data/akshare/search?q=${encodeURIComponent(searchQuery)}`);
-        setSearchResults(res.data);
-        setShowSearchResults(true);
-      } catch (err) {
-        console.error('Search failed:', err);
-      }
-    };
-
-    const debounce = setTimeout(searchFunctions, 300);
-    return () => clearTimeout(debounce);
-  }, [searchQuery]);
-
-  const handleSearchSelect = (func: AkshareFunction) => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowSearchResults(false);
-
-    // 查找并选中分类
-    const category = Object.keys(categories).find(cat =>
-      categories[cat]?.some(f => f.name === func.name)
-    );
-    if (category) {
-      setSelectedCategory(category);
-      setSelectedFunction(func.name);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedCategory && categories[selectedCategory]?.length > 0) {
-      const firstFunc = categories[selectedCategory][0].name;
-      setSelectedFunction(firstFunc);
-      fetchFunctionDetail(firstFunc);
-    }
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    if (selectedFunction) {
-      fetchFunctionDetail(selectedFunction);
-    }
-  }, [selectedFunction]);
-
   const handleQuery = async () => {
     setQueryLoading(true);
     setQueryError(null);
     setQueryResult(null);
 
     try {
-      // 使用正确的新API路径
-      const res = await axios.post(`/api/data/akshare/execute?func_name=${selectedFunction}`, {
-        ...Object.entries(params).reduce((acc, [key, value]) => {
-          if (value) acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>),
+      // 先获取函数详情，然后执行
+      const res = await axios.post(`/api/data/akshare/execute`, {
+        func_name: selectedFunction,
+        params: params
       });
       setQueryResult(res.data);
     } catch (err: any) {
       setQueryError(err.response?.data?.detail || err.message || '查询失败');
     } finally {
       setQueryLoading(false);
-    }
-  };
-
-  const fetchSyncStatus = async () => {
-    try {
-      const res = await axios.get('/api/data/stats');
-      setSyncStatus(res.data);
-    } catch (err) {
-      console.error('Failed to fetch sync status:', err);
-    }
-  };
-
-  const handleSyncBasics = async () => {
-    setSyncLoading(true);
-    setSyncMessage('');
-    try {
-      const res = await axios.post('/api/data/sync', {
-        stock_code: '000001',
-        start_date: '20250101',
-        end_date: '20250227',
-      });
-      setSyncMessage(`同步完成: ${JSON.stringify(res.data)}`);
-      fetchSyncStatus();
-    } catch (err: any) {
-      setSyncMessage(`同步失败: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handleSyncKlines = async () => {
-    if (!syncForm.startDate || !syncForm.endDate) {
-      setSyncMessage('请选择开始和结束日期');
-      return;
-    }
-
-    setSyncLoading(true);
-    setSyncMessage('');
-    try {
-      const res = await axios.post('/api/data/sync', {
-        stock_code: syncForm.stockCodes || '600519',
-        start_date: syncForm.startDate.replace(/-/g, ''),
-        end_date: syncForm.endDate.replace(/-/g, ''),
-      });
-      setSyncMessage(`K线数据同步完成`);
-      fetchSyncStatus();
-    } catch (err: any) {
-      setSyncMessage(`同步失败: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setSyncLoading(false);
     }
   };
 
@@ -222,353 +352,152 @@ export default function DataQuery() {
     return String(value);
   };
 
-  // 按层级分组分类
-  const categoryGroups = useMemo(() => {
-    const groups: Record<string, string[]> = {
-      '微观-个股': [],
-      '中观-板块': [],
-      '宏观-市场': [],
-      '其他': [],
-    };
-
-    Object.keys(categories).forEach(cat => {
-      if (cat.startsWith('微观')) {
-        groups['微观-个股'].push(cat);
-      } else if (cat.startsWith('中观')) {
-        groups['中观-板块'].push(cat);
-      } else if (cat.startsWith('宏观')) {
-        groups['宏观-市场'].push(cat);
-      } else {
-        groups['其他'].push(cat);
-      }
-    });
-
-    return groups;
-  }, [categories]);
-
   return (
-    <div className="data-query-page">
-      <div className="page-header">
+    <div className="dq-container">
+      {/* 头部搜索 */}
+      <div className="dq-header">
         <h1>数据查询</h1>
-        <p className="subtitle">AkShare 全面接入 - 宏观/中观/微观</p>
+        <div className="dq-search">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="搜索接口..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* 搜索框 */}
-      <div className="search-box">
-        <input
-          type="text"
-          placeholder="搜索接口名称或描述... (如: 涨停、资金、龙虎榜)"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          onFocus={() => searchQuery && setShowSearchResults(true)}
-        />
-        <span className="search-icon">🔍</span>
-
-        {/* 搜索结果下拉 */}
-        {showSearchResults && searchResults.length > 0 && (
-          <div className="search-results">
-            {searchResults.map(func => (
-              <div
-                key={func.name}
-                className="search-result-item"
-                onClick={() => handleSearchSelect(func)}
-              >
-                <span className="result-name">{func.name}</span>
-                <span className="result-desc">{func.description}</span>
-                <span className="result-cat">{func.category}</span>
+      {/* 主内容区 */}
+      <div className="dq-main">
+        {/* 左侧分类 */}
+        <div className="dq-sidebar">
+          {filteredCategories.map(cat => (
+            <div key={cat.name} className="dq-category">
+              <div className="dq-category-title">
+                <span className="cat-icon">{cat.icon}</span>
+                {cat.name}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'query' ? 'active' : ''}`}
-          onClick={() => setActiveTab('query')}
-        >
-          <span className="tab-icon">🔍</span>
-          AkShare 查询
-        </button>
-        <button
-          className={`tab ${activeTab === 'sync' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sync')}
-        >
-          <span className="tab-icon">📡</span>
-          数据同步
-        </button>
-      </div>
-
-      {activeTab === 'query' && (
-        <div className="query-panel">
-          {/* 左侧分类导航 */}
-          <div className="query-sidebar">
-            {/* 微观-个股 */}
-            <div className="category-group">
-              <div className="group-title">📊 微观-个股</div>
-              {categoryGroups['微观-个股'].map(cat => (
-                <div key={cat} className="category-section">
+              <div className="dq-category-items">
+                {cat.items.map(item => (
                   <button
-                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(cat)}
+                    key={item.name}
+                    className={`dq-item ${selectedFunction === item.name ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedFunction(item.name);
+                      fetchFunctionDetail(item.name);
+                    }}
                   >
-                    {cat.replace('微观-', '')}
-                    <span className="count">{categories[cat]?.length || 0}</span>
+                    <span className="item-name">{item.name}</span>
+                    <span className="item-desc">{item.desc}</span>
                   </button>
-                </div>
-              ))}
-            </div>
-
-            {/* 中观-板块 */}
-            <div className="category-group">
-              <div className="group-title">📈 中观-板块</div>
-              {categoryGroups['中观-板块'].map(cat => (
-                <div key={cat} className="category-section">
-                  <button
-                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(cat)}
-                  >
-                    {cat.replace('中观-', '')}
-                    <span className="count">{categories[cat]?.length || 0}</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* 宏观-市场 */}
-            <div className="category-group">
-              <div className="group-title">🌐 宏观-市场</div>
-              {categoryGroups['宏观-市场'].map(cat => (
-                <div key={cat} className="category-section">
-                  <button
-                    className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(cat)}
-                  >
-                    {cat.replace('宏观-', '')}
-                    <span className="count">{categories[cat]?.length || 0}</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* 其他 */}
-            {categoryGroups['其他'].map(cat => (
-              <div key={cat} className="category-section">
-                <button
-                  className={`category-item ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                  <span className="count">{categories[cat]?.length || 0}</span>
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* 中间接口列表 */}
-          <div className="query-functions">
-            <h3>{selectedCategory}</h3>
-            <div className="function-list">
-              {categories[selectedCategory]?.map(func => (
-                <button
-                  key={func.name}
-                  className={`function-item ${selectedFunction === func.name ? 'active' : ''}`}
-                  onClick={() => setSelectedFunction(func.name)}
-                >
-                  <span className="func-name">{func.name}</span>
-                  <span className="func-desc">{func.description}</span>
-                </button>
-              ))}
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* 右侧详情 */}
-          <div className="query-main">
-            {functionDetail && (
-              <div className="function-detail">
-                <div className="detail-header">
-                  <div className="detail-title">
-                    <h3>{functionDetail.name}</h3>
+        {/* 右侧详情 */}
+        <div className="dq-content">
+          {functionDetail && (
+            <div className="dq-detail">
+              <div className="dq-detail-header">
+                <div className="dq-detail-title">
+                  <h2>{functionDetail.name}</h2>
+                  {functionDetail.doc_url && (
                     <a
                       href={functionDetail.doc_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="doc-link"
-                      title="查看官方文档"
+                      className="dq-doc-link"
                     >
                       📖 文档
                     </a>
-                  </div>
-                  <span className="category-tag">{functionDetail.category}</span>
+                  )}
                 </div>
-
-                {functionDetail.description && (
-                  <p className="function-desc">{functionDetail.description}</p>
-                )}
-
+                <p className="dq-detail-desc">{functionDetail.description}</p>
                 {functionDetail.remark && (
-                  <p className="function-remark">💡 {functionDetail.remark}</p>
+                  <p className="dq-detail-remark">{functionDetail.remark}</p>
                 )}
+              </div>
 
-                {functionDetail.params && functionDetail.params.length > 0 && (
-                  <div className="params-section">
-                    <h4>参数配置</h4>
-                    <div className="params-grid">
-                      {functionDetail.params.map((param: any) => (
-                        <div key={param.name} className="param-item">
-                          <label>
-                            {param.name}
-                            {param.required && <span className="required">*</span>}
-                          </label>
-                          <input
-                            type="text"
-                            placeholder={param.default || param.description || ''}
-                            value={params[param.name] || ''}
-                            onChange={e => setParams({ ...params, [param.name]: e.target.value })}
-                          />
-                          <span className="param-hint">{param.description}</span>
-                        </div>
-                      ))}
-                    </div>
+              {functionDetail.params && functionDetail.params.length > 0 && (
+                <div className="dq-params">
+                  <h3>参数</h3>
+                  <div className="dq-params-grid">
+                    {functionDetail.params.map(param => (
+                      <div key={param.name} className="dq-param">
+                        <label>
+                          {param.name}
+                          {param.required && <span className="required">*</span>}
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={param.default || param.description || ''}
+                          value={params[param.name] || ''}
+                          onChange={e => setParams({ ...params, [param.name]: e.target.value })}
+                        />
+                        <span className="param-hint">{param.description}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-
-                <div className="action-buttons">
-                  <button
-                    className="btn btn-primary btn-large"
-                    onClick={handleQuery}
-                    disabled={queryLoading}
-                  >
-                    {queryLoading ? '查询中...' : '▶ 执行查询'}
-                  </button>
                 </div>
+              )}
+
+              <button
+                className="dq-query-btn"
+                onClick={handleQuery}
+                disabled={queryLoading}
+              >
+                {queryLoading ? '查询中...' : '▶ 执行查询'}
+              </button>
+            </div>
+          )}
+
+          {queryError && (
+            <div className="dq-error">
+              <span>{queryError}</span>
+              <button onClick={() => setQueryError(null)}>×</button>
+            </div>
+          )}
+
+          {queryResult && (
+            <div className="dq-result">
+              <div className="dq-result-header">
+                <h3>查询结果</h3>
+                <span className="result-count">
+                  {queryResult.data?.length || 0} 条
+                </span>
               </div>
-            )}
 
-            {queryError && (
-              <div className="error-message">
-                <span>{queryError}</span>
-                <button onClick={() => setQueryError(null)}>×</button>
-              </div>
-            )}
-
-            {queryResult && (
-              <div className="result-section">
-                <div className="result-header">
-                  <h4>
-                    查询结果
-                    {queryResult.data && (
-                      <span className="result-count">共 {queryResult.data.length} 条</span>
-                    )}
-                  </h4>
-                </div>
-
-                {queryResult.data && queryResult.data.length > 0 ? (
-                  <div className="result-table-wrapper">
-                    <table className="result-table">
-                      <thead>
-                        <tr>
+              {queryResult.data && queryResult.data.length > 0 ? (
+                <div className="dq-result-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        {queryResult.columns?.map(col => (
+                          <th key={col}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {queryResult.data.slice(0, 100).map((row: any, idx: number) => (
+                        <tr key={idx}>
                           {queryResult.columns?.map(col => (
-                            <th key={col}>{col}</th>
+                            <td key={col}>{formatValue(row[col])}</td>
                           ))}
                         </tr>
-                      </thead>
-                      <tbody>
-                        {queryResult.data.slice(0, 100).map((row: any, idx: number) => (
-                          <tr key={idx}>
-                            {queryResult.columns?.map(col => (
-                              <td key={col}>{formatValue(row[col])}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="empty-result">
-                    <p>暂无数据</p>
-                  </div>
-                )}
-
-                {queryResult.data && queryResult.data.length > 100 && (
-                  <p className="result-hint">仅显示前 100 条数据</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'sync' && (
-        <div className="sync-panel">
-          <div className="sync-status-card">
-            <h3>数据状态</h3>
-            <div className="status-grid">
-              <div className="status-item">
-                <span className="status-label">股票基本信息</span>
-                <span className="status-value">{syncStatus?.stock_basic_count || 0}</span>
-              </div>
-              <div className="status-item">
-                <span className="status-label">实时行情</span>
-                <span className="status-value">{syncStatus?.stock_quote_count || 0}</span>
-              </div>
-              <div className="status-item">
-                <span className="status-label">K线数据</span>
-                <span className="status-value">{syncStatus?.stock_kline_count || 0}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="sync-sections">
-            <div className="sync-section highlight">
-              <h3>同步K线数据（用于回测）</h3>
-              <p>获取历史K线数据，用于回测策略</p>
-              <div className="sync-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>开始日期</label>
-                    <input
-                      type="date"
-                      value={syncForm.startDate}
-                      onChange={e => setSyncForm({ ...syncForm, startDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>结束日期</label>
-                    <input
-                      type="date"
-                      value={syncForm.endDate}
-                      onChange={e => setSyncForm({ ...syncForm, endDate: e.target.value })}
-                    />
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="form-group">
-                  <label>股票代码（可选，逗号分隔留空则同步所有）</label>
-                  <input
-                    type="text"
-                    placeholder="如: 600519,000001,300750"
-                    value={syncForm.stockCodes}
-                    onChange={e => setSyncForm({ ...syncForm, stockCodes: e.target.value })}
-                  />
-                </div>
-                <button
-                  className="btn btn-success"
-                  onClick={handleSyncKlines}
-                  disabled={syncLoading}
-                >
-                  {syncLoading ? '同步中...' : '开始同步K线数据'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {syncMessage && (
-            <div className="sync-message">
-              {syncMessage}
+              ) : (
+                <div className="dq-empty">暂无数据</div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
