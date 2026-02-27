@@ -22,6 +22,7 @@ interface QueryResult {
   columns?: string[];
   total?: number;
   function?: string;
+  source?: 'cache' | 'akshare';  // 数据来源
 }
 
 export default function DataQuery() {
@@ -525,7 +526,7 @@ export default function DataQuery() {
     }
   };
 
-  const handleQuery = async () => {
+  const handleQuery = async (useCache: boolean = true) => {
     setQueryLoading(true);
     setQueryError(null);
     setQueryResult(null);
@@ -534,11 +535,31 @@ export default function DataQuery() {
       // 先获取函数详情，然后执行
       const res = await axios.post(`/api/data/akshare/execute`, {
         func_name: selectedFunction,
-        params: params
+        params: params,
+        use_cache: useCache
       });
       setQueryResult(res.data);
     } catch (err: any) {
       setQueryError(err.response?.data?.detail || err.message || '查询失败');
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
+  // 强制刷新
+  const handleForceRefresh = () => {
+    handleQuery(false); // use_cache = false
+  };
+
+  // 手动同步
+  const handleSync = async () => {
+    setQueryLoading(true);
+    try {
+      await axios.post(`/api/data/akshare/sync/${selectedFunction}`);
+      // 同步后重新查询
+      await handleQuery(true);
+    } catch (err: any) {
+      setQueryError(err.response?.data?.detail || err.message || '同步失败');
     } finally {
       setQueryLoading(false);
     }
@@ -678,13 +699,32 @@ export default function DataQuery() {
                 </div>
               )}
 
-              <button
-                className="dq-query-btn"
-                onClick={handleQuery}
-                disabled={queryLoading}
-              >
-                {queryLoading ? '查询中...' : '▶ 执行查询'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button
+                  className="dq-query-btn"
+                  onClick={() => handleQuery(true)}
+                  disabled={queryLoading}
+                  style={{ flex: 1 }}
+                >
+                  {queryLoading ? '查询中...' : '▶ 执行查询'}
+                </button>
+                <button
+                  className="dq-query-btn"
+                  onClick={handleForceRefresh}
+                  disabled={queryLoading}
+                  style={{ flex: 1, background: 'linear-gradient(135deg, #fa8c16 0%, #ffc069 100%)' }}
+                >
+                  强制刷新
+                </button>
+                <button
+                  className="dq-query-btn"
+                  onClick={handleSync}
+                  disabled={queryLoading}
+                  style={{ flex: 1, background: 'linear-gradient(135deg, #52c41a 0%, #95de64 100%)' }}
+                >
+                  同步数据
+                </button>
+              </div>
             </div>
           )}
 
@@ -699,9 +739,23 @@ export default function DataQuery() {
             <div className="dq-result">
               <div className="dq-result-header">
                 <h3>查询结果</h3>
-                <span className="result-count">
-                  {queryResult.data?.length || 0} 条
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {queryResult.source && (
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      background: queryResult.source === 'cache' ? '#f6ffed' : '#e6f4ff',
+                      color: queryResult.source === 'cache' ? '#52c41a' : '#1890ff',
+                      border: `1px solid ${queryResult.source === 'cache' ? '#b7eb8f' : '#91d5ff'}`
+                    }}>
+                      {queryResult.source === 'cache' ? '📦 缓存' : '🌐 实时'}
+                    </span>
+                  )}
+                  <span className="result-count">
+                    {queryResult.data?.length || 0} 条
+                  </span>
+                </div>
               </div>
 
               {queryResult.data && queryResult.data.length > 0 ? (

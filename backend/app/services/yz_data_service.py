@@ -33,6 +33,109 @@ class YzDataService:
     FUND_FLOW_CACHE_TTL = 300  # 资金流向 5分钟
     LHB_CACHE_TTL = 600        # 龙虎榜 10分钟
 
+    # ==================== 通用缓存方法 ====================
+
+    # 函数名到方法的映射
+    QUERY_METHODS = {
+        "stock_zh_a_spot_em": "_get_spot_from_local",
+        "stock_zh_a_limit_up_em": "_get_limit_up_from_local",
+        "stock_zt_pool_em": "_get_zt_pool_from_local",
+        "stock_individual_fund_flow": "_get_fund_flow_from_local",
+        "stock_sector_fund_flow_rank": "_get_sector_fund_flow_from_local",
+        "stock_lhb_detail_em": "_get_lhb_detail_from_local",
+        "stock_lhb_yytj_sina": "_get_lhb_yytj_from_local",
+        "stock_lh_yyb_most": "_get_lhb_yyb_from_local",
+    }
+
+    SAVE_METHODS = {
+        "stock_zh_a_spot_em": "_save_spot_to_local",
+        "stock_zh_a_limit_up_em": "_save_limit_up_to_local",
+        "stock_zt_pool_em": "_save_zt_pool_to_local",
+        "stock_individual_fund_flow": "_save_fund_flow_to_local",
+        "stock_sector_fund_flow_rank": "_save_sector_fund_flow_to_local",
+        "stock_lhb_detail_em": "_save_lhb_detail_to_local",
+        "stock_lhb_yytj_sina": "_save_lhb_yytj_to_local",
+        "stock_lh_yyb_most": "_save_lhb_yyb_to_local",
+    }
+
+    @staticmethod
+    def query_from_local(func_name: str, params: dict) -> Optional[List[Dict]]:
+        """从本地查询数据"""
+        method_name = YzDataService.QUERY_METHODS.get(func_name)
+        if not method_name:
+            return None
+
+        method = getattr(YzDataService, method_name, None)
+        if not method:
+            return None
+
+        # 根据函数类型调用不同的查询方法
+        if func_name == "stock_individual_fund_flow":
+            stock_code = params.get("stock")
+            if stock_code:
+                return method(stock_code)
+        elif func_name in ["stock_zh_a_limit_up_em", "stock_zt_pool_em"]:
+            # 使用日期参数或今天
+            from datetime import date
+            target_date = params.get("date")
+            if target_date:
+                from datetime import datetime
+                target_date = datetime.strptime(target_date, "%Y%m%d").date()
+            else:
+                target_date = date.today()
+            return method(target_date)
+        elif func_name == "stock_sector_fund_flow_rank":
+            indicator = params.get("indicator", "今日")
+            sector_type = params.get("sector_type", "行业资金流")
+            return method(indicator, sector_type)
+
+        # 默认调用无参数方法
+        return method()
+
+    @staticmethod
+    def save_to_local(func_name: str, params: dict, result: dict):
+        """保存数据到本地"""
+        method_name = YzDataService.SAVE_METHODS.get(func_name)
+        if not method_name:
+            return
+
+        method = getattr(YzDataService, method_name, None)
+        if not method:
+            return
+
+        # 获取数据
+        data = result.get("data", [])
+        if not data:
+            return
+
+        import pandas as pd
+        df = pd.DataFrame(data)
+
+        # 根据函数类型调用不同的保存方法
+        if func_name == "stock_individual_fund_flow":
+            stock_code = params.get("stock")
+            if stock_code:
+                method(df, stock_code)
+        elif func_name in ["stock_zh_a_limit_up_em", "stock_zt_pool_em"]:
+            target_date = params.get("date")
+            if target_date:
+                from datetime import datetime
+                target_date = datetime.strptime(target_date, "%Y%m%d").date()
+            else:
+                from datetime import date
+                target_date = date.today()
+            method(df, target_date)
+        elif func_name == "stock_sector_fund_flow_rank":
+            indicator = params.get("indicator", "今日")
+            sector_type = params.get("sector_type", "行业资金流")
+            method(df, indicator, sector_type)
+        elif func_name == "stock_lhb_detail_em":
+            method(df)
+        elif func_name == "stock_lhb_yytj_sina":
+            method(df)
+        elif func_name == "stock_lh_yyb_most":
+            method(df)
+
     # ==================== A股实时行情 ====================
 
     @staticmethod

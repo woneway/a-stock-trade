@@ -2528,6 +2528,34 @@ AKSHARE_FUNCTIONS = {
 }
 
 
+# ==================== 缓存配置 ====================
+# 缓存模型映射：函数名 -> (模型, 是否需要同步到数据库)
+from app.models.external_yz_common import (
+    ExternalStockSpot,
+    ExternalLimitUp,
+    ExternalZtPool,
+    ExternalIndividualFundFlow,
+    ExternalSectorFundFlow,
+    ExternalLhbDetail,
+    ExternalLhbYytj,
+    ExternalLhbYyb,
+)
+
+CACHE_MODELS = {
+    "stock_zh_a_spot_em": {"model": ExternalStockSpot, "sync": False},  # 实时行情，不持久化
+    "stock_zh_a_limit_up_em": {"model": ExternalLimitUp, "sync": True},
+    "stock_zt_pool_em": {"model": ExternalZtPool, "sync": True},
+    "stock_individual_fund_flow": {"model": ExternalIndividualFundFlow, "sync": True},
+    "stock_sector_fund_flow_rank": {"model": ExternalSectorFundFlow, "sync": True},
+    "stock_lhb_detail_em": {"model": ExternalLhbDetail, "sync": True},
+    "stock_lhb_yytj_sina": {"model": ExternalLhbYytj, "sync": True},
+    "stock_lh_yyb_most": {"model": ExternalLhbYyb, "sync": True},
+}
+
+# 需要同步到数据库的接口列表
+SYNC_FUNCTIONS = {k for k, v in CACHE_MODELS.items() if v["sync"]}
+
+
 # 分类 - 重新设计
 CATEGORIES = {
     # ==================== 一、A股行情 ====================
@@ -2906,59 +2934,131 @@ def get_akshare_function(func_name: str):
 class AkshareExecuteRequest(BaseModel):
     func_name: str
     params: dict = {}
+    use_cache: bool = True  # 是否使用缓存，默认开启
 
 
 @router.post("/akshare/execute")
 def execute_akshare_function(request: AkshareExecuteRequest):
-    """执行akshare函数"""
+    """执行akshare函数，支持缓存"""
+    from app.services.yz_data_service import YzDataService
+
     func_name = request.func_name
     params = request.params
+    use_cache = request.use_cache
 
     if func_name not in AKSHARE_FUNCTIONS:
         raise HTTPException(status_code=404, detail=f"函数 {func_name} 不存在")
 
-    try:
-        import akshare as ak
-        func = getattr(ak, func_name)
+    # 检查是否有缓存配置
+    cache_config = CACHE_MODELS.get(func_name)
 
-        # 过滤有效参数
-        valid_params = {}
-        func_params = AKSHARE_FUNCTIONS[func_name]["params"]
-        for p in func_params:
-            pname = p["name"]
-            if pname in params and params[pname]:
-                valid_params[pname] = params[pname]
+    # 有缓存配置且启用缓存
+    if cache_config and use_cache:
+        # 尝试从本地获取
+        local_data = YzDataService.query_from_local(func_name, params)
+        if local_data:
+            return {"source": "cache", "data": local_data}
 
-        if valid_params:
-            result = func(**valid_params)
-        else:
-            result = func()
+        # 无缓存，调用 akshare
+        result = _call_akshare(func_name, params)
 
-        # 转换为dict格式，处理NaN值
-        def clean_value(v):
-            import math
-            if v is None:
+        # 如果需要同步，则存储到数据库
+        if cache_config["sync"]:
+            YzDataService.save_to_local(func_name, params, result)
+
+        return {"source": "akshare", "data": result}
+
+    # 无缓存配置或禁用缓存，直接调用 akshare
+    result = _call_akshare(func_name, params)
+    return {"source": "akshare", "data": result}
+
+
+def _call_akshare(func_name: str, params: dict):
+    """调用 akshare 函数"""
+    import akshare as ak
+    from sqlmodel import Session
+
+    func = getattr(ak, func_name)
+
+    # 过滤有效参数
+    valid_params = {}
+    func_params = AKSHARE_FUNCTIONS[func_name]["params"]
+    for p in func_params:
+        pname = p["name"]
+        if pname in params and params[pname]:
+            valid_params[pname] = params[pname]
+
+    if valid_params:
+        result = func(**valid_params)
+    else:
+        result = func()
+
+    # 转换为dict格式，处理NaN值
+    def clean_value(v):
+        import math
+        if v is None:
+            return None
+        if isinstance(v, float):
+            if math.isnan(v) or math.isinf(v):
                 return None
-            if isinstance(v, float):
-                if math.isnan(v) or math.isinf(v):
-                    return None
-            return v
+        return v
 
-        def clean_record(record):
-            return {k: clean_value(v) for k, v in record.items()}
+    def clean_record(record):
+        return {k: clean_value(v) for k, v in record.items()}
 
-        if hasattr(result, 'to_dict'):
-            records = result.to_dict('records')
-            cleaned_records = [clean_record(r) for r in records]
-            return {"data": cleaned_records, "columns": list(result.columns) if hasattr(result, 'columns') else []}
-        elif isinstance(result, list):
-            if result and isinstance(result[0], dict):
-                result = [clean_record(r) if isinstance(r, dict) else r for r in result]
-            return {"data": result, "columns": []}
-        else:
-            return {"data": str(result), "columns": []}
+    if hasattr(result, 'to_dict'):
+        records = result.to_dict('records')
+        cleaned_records = [clean_record(r) for r in records]
+        return {"data": cleaned_records, "columns": list(result.columns) if hasattr(result, 'columns') else []}
+    elif isinstance(result, list):
+        if result and isinstance(result[0], dict):
+            result = [clean_record(r) if isinstance(r, dict) else r for r in result]
+        return {"data": result, "columns": []}
+    else:
+        return {"data": str(result), "columns": []}
+
+
+@router.post("/akshare/sync/{func_name}")
+def sync_function(
+    func_name: str,
+    trade_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
+    """手动同步数据到本地数据库"""
+    from app.services.yz_data_service import YzDataService
+
+    if func_name not in AKSHARE_FUNCTIONS:
+        raise HTTPException(status_code=404, detail=f"函数 {func_name} 不存在")
+
+    cache_config = CACHE_MODELS.get(func_name)
+    if not cache_config:
+        raise HTTPException(status_code=400, detail=f"该接口不支持同步")
+
+    if not cache_config["sync"]:
+        raise HTTPException(status_code=400, detail=f"该接口不需要同步到数据库")
+
+    try:
+        # 构建参数
+        params = {}
+        if trade_date:
+            params["date"] = trade_date.replace("-", "")
+        if start_date:
+            params["start_date"] = start_date.replace("-", "")
+        if end_date:
+            params["end_date"] = end_date.replace("-", "")
+
+        # 调用 akshare
+        result = _call_akshare(func_name, params)
+
+        # 保存到本地
+        YzDataService.save_to_local(func_name, params, result)
+
+        data = result.get("data", [])
+        return {"status": "success", "synced": len(data), "func_name": func_name}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"执行失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"同步失败: {str(e)}")
 
 
 # 修复导入
