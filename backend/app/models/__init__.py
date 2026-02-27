@@ -1,4 +1,3 @@
-from app.models.data_lineage import DataLineage
 from app.models.daily import Plan
 from app.models.backtest_strategy import BacktestStrategy
 from app.models.stock_info import StockInfo
@@ -12,7 +11,6 @@ from app.models.trading import (
 )
 
 __all__ = [
-    "DataLineage",
     "Plan",
     "BacktestStrategy",
     # 股票数据
