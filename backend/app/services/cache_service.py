@@ -339,23 +339,11 @@ class CacheService:
 
     @staticmethod
     def _convert_to_chinese(data: List[Dict], func_name: str) -> Dict:
-        """将数据转换为中文列名"""
+        """返回原始字段名，保持与 akshare 一致"""
         if not data:
             return {"data": data, "columns": []}
 
-        column_aliases = CacheService._get_column_aliases(func_name)
-
-        if column_aliases:
-            # 转换 columns 为中文
-            columns = [column_aliases.get(col, col) for col in data[0].keys()]
-            # 转换每条数据
-            converted_data = []
-            for row in data:
-                converted_row = {column_aliases.get(k, k): v for k, v in row.items()}
-                converted_data.append(converted_row)
-            return {"data": converted_data, "columns": columns}
-
-        # 没有映射则使用原始列名
+        # 直接返回原始字段名，与 akshare 保持一致
         columns = list(data[0].keys()) if data else []
         return {"data": data, "columns": columns}
 
