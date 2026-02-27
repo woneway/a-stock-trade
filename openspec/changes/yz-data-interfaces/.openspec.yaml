@@ -1,4 +1,4 @@
 name: yz-data-interfaces
 description: 完善游资常用数据接口配置，包括缓存配置和DB模型
-status: planning
+status: completed
 created_at: "2026-02-27"
