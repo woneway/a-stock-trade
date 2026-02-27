@@ -502,7 +502,8 @@ class YzDataService:
         """从 akshare 获取涨停板"""
         import akshare as ak
         try:
-            df = ak.stock_zh_a_limit_up_em(date=target_date.strftime("%Y%m%d"))
+            # 使用涨停股池作为涨停板数据
+            df = ak.stock_zt_pool_em(date=target_date.strftime("%Y%m%d"))
             return df
         except Exception as e:
             logger.error(f"获取涨停板失败: {e}")
@@ -654,8 +655,16 @@ class YzDataService:
     @staticmethod
     def _fetch_fund_flow_from_akshare(stock_code: str, market: str) -> Optional[pd.DataFrame]:
         import akshare as ak
+        # 转换市场参数
+        market_map = {
+            "上海A股": "sh",
+            "深圳A股": "sz",
+            "sh": "sh",
+            "sz": "sz",
+        }
+        ak_market = market_map.get(market, "sh")
         try:
-            df = ak.stock_individual_fund_flow(stock=stock_code, market=market)
+            df = ak.stock_individual_fund_flow(stock=stock_code, market=ak_market)
             return df
         except Exception as e:
             logger.error(f"获取资金流向失败: {e}")
@@ -677,21 +686,28 @@ class YzDataService:
                     if pd.isna(trade_date):
                         continue
 
+                    # 处理列名兼容 - akshare返回的列名可能包含特殊字符
+                    def get_val(key, default=0):
+                        val = row.get(key)
+                        if pd.isna(val):
+                            return None
+                        return float(val)
+
                     record = ExternalIndividualFundFlow(
                         trade_date=pd.to_datetime(trade_date).date(),
                         code=stock_code,
-                        name=str(row.get('名称', '')),
-                        net_main=float(row.get('主力净流入', 0)) if pd.notna(row.get('主力净流入')) else None,
-                        net_super=float(row.get('超大单净流入', 0)) if pd.notna(row.get('超大单净流入')) else None,
-                        net_big=float(row.get('大单净流入', 0)) if pd.notna(row.get('大单净流入')) else None,
-                        net_mid=float(row.get('中单净流入', 0)) if pd.notna(row.get('中单净流入')) else None,
-                        net_small=float(row.get('小单净流入', 0)) if pd.notna(row.get('小单净流入')) else None,
-                        amount_main=float(row.get('主力成交额', 0)) if pd.notna(row.get('主力成交额')) else None,
-                        amount_super=float(row.get('超大单成交额', 0)) if pd.notna(row.get('超大单成交额')) else None,
-                        amount_big=float(row.get('大单成交额', 0)) if pd.notna(row.get('大单成交额')) else None,
-                        amount_mid=float(row.get('中单成交额', 0)) if pd.notna(row.get('中单成交额')) else None,
-                        amount_small=float(row.get('小单成交额', 0)) if pd.notna(row.get('小单成交额')) else None,
-                        ratio_main=float(row.get('主力净流入占比', 0)) if pd.notna(row.get('主力净流入占比')) else None,
+                        name=str(row.get('名称', '')) if pd.notna(row.get('名称')) else '',
+                        net_main=get_val('主力净流入-净额'),
+                        net_super=get_val('超大单净流入-净额'),
+                        net_big=get_val('大单净流入-净额'),
+                        net_mid=get_val('中单净流入-净额'),
+                        net_small=get_val('小单净流入-净额'),
+                        amount_main=get_val('主力成交额'),
+                        amount_super=get_val('超大单成交额'),
+                        amount_big=get_val('大单成交额'),
+                        amount_mid=get_val('中单成交额'),
+                        amount_small=get_val('小单成交额'),
+                        ratio_main=get_val('主力净流入-净占比'),
                     )
                     session.add(record)
 
@@ -1023,4 +1039,6 @@ class YzDataService:
         # 处理列名映射
         df_copy = df.copy()
         df_copy.columns = [str(c) for c in df_copy.columns]
+        # 替换 NaN 值为 None
+        df_copy = df_copy.replace({float('nan'): None, float('inf'): None, float('-inf'): None})
         return df_copy.to_dict('records')
