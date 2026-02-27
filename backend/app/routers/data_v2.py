@@ -2529,31 +2529,12 @@ AKSHARE_FUNCTIONS = {
 
 
 # ==================== 缓存配置 ====================
-# 缓存模型映射：函数名 -> (模型, 是否需要同步到数据库)
-from app.models.external_yz_common import (
-    ExternalStockSpot,
-    ExternalLimitUp,
-    ExternalZtPool,
-    ExternalIndividualFundFlow,
-    ExternalSectorFundFlow,
-    ExternalLhbDetail,
-    ExternalLhbYytj,
-    ExternalLhbYyb,
-)
-
-CACHE_MODELS = {
-    "stock_zh_a_spot_em": {"model": ExternalStockSpot, "sync": False},  # 实时行情，不持久化
-    "stock_zh_a_limit_up_em": {"model": ExternalLimitUp, "sync": True},
-    "stock_zt_pool_em": {"model": ExternalZtPool, "sync": True},
-    "stock_individual_fund_flow": {"model": ExternalIndividualFundFlow, "sync": True},
-    "stock_sector_fund_flow_rank": {"model": ExternalSectorFundFlow, "sync": True},
-    "stock_lhb_detail_em": {"model": ExternalLhbDetail, "sync": True},
-    "stock_lhb_yytj_sina": {"model": ExternalLhbYytj, "sync": True},
-    "stock_lh_yyb_most": {"model": ExternalLhbYyb, "sync": True},
-}
+# 从 yz_data_service 导入缓存配置
+from app.services.yz_data_service import YzDataService
+CACHE_MODELS = YzDataService.CACHE_CONFIG
 
 # 需要同步到数据库的接口列表
-SYNC_FUNCTIONS = {k for k, v in CACHE_MODELS.items() if v["sync"]}
+SYNC_FUNCTIONS = {k for k, v in CACHE_MODELS.items() if v.get("sync")}
 
 
 # 分类 - 重新设计

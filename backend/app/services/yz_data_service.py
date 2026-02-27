@@ -58,6 +58,62 @@ class YzDataService:
         "stock_lh_yyb_most": "_save_lhb_yyb_to_local",
     }
 
+    # ==================== 接口配置 ====================
+    # query_type 说明:
+    # - realtime: 实时行情，每次都从 akshare 获取
+    # - date: 按日期查询，需要 date 参数
+    # - stock: 按股票查询，需要 stock 参数
+    # - params: 自定义参数组合查询
+    # - date_range: 日期范围查询
+    # - latest: 无参数，返回最新一次数据
+    CACHE_CONFIG = {
+        "stock_zh_a_spot_em": {
+            "model": ExternalStockSpot,
+            "sync": False,
+            "query_type": "realtime",
+        },
+        "stock_zh_a_limit_up_em": {
+            "model": ExternalLimitUp,
+            "sync": True,
+            "query_type": "date",
+            "date_param": "date",
+        },
+        "stock_zt_pool_em": {
+            "model": ExternalZtPool,
+            "sync": True,
+            "query_type": "date",
+            "date_param": "date",
+        },
+        "stock_individual_fund_flow": {
+            "model": ExternalIndividualFundFlow,
+            "sync": True,
+            "query_type": "stock",
+            "stock_param": "stock",
+        },
+        "stock_sector_fund_flow_rank": {
+            "model": ExternalSectorFundFlow,
+            "sync": True,
+            "query_type": "params",
+            "params": ["indicator", "sector_type"],
+        },
+        "stock_lhb_detail_em": {
+            "model": ExternalLhbDetail,
+            "sync": True,
+            "query_type": "date_range",
+            "date_params": ["start_date", "end_date"],
+        },
+        "stock_lhb_yytj_sina": {
+            "model": ExternalLhbYytj,
+            "sync": True,
+            "query_type": "latest",
+        },
+        "stock_lh_yyb_most": {
+            "model": ExternalLhbYyb,
+            "sync": True,
+            "query_type": "latest",
+        },
+    }
+
     # 字段中文映射
     COLUMN_ALIASES = {
         "stock_lh_yyb_most": {
@@ -161,46 +217,13 @@ class YzDataService:
         return YzDataService.COLUMN_ALIASES.get(func_name, {})
 
     @staticmethod
-    def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
-        """从本地查询数据，返回 {data, columns} 格式"""
-        method_name = YzDataService.QUERY_METHODS.get(func_name)
-        if not method_name:
-            return None
-
-        method = getattr(YzDataService, method_name, None)
-        if not method:
-            return None
-
-        # 根据函数类型调用不同的查询方法
-        if func_name == "stock_individual_fund_flow":
-            stock_code = params.get("stock")
-            if stock_code:
-                data = method(stock_code)
-        elif func_name in ["stock_zh_a_limit_up_em", "stock_zt_pool_em"]:
-            # 使用日期参数或今天
-            from datetime import date
-            target_date = params.get("date")
-            if target_date:
-                from datetime import datetime
-                target_date = datetime.strptime(target_date, "%Y%m%d").date()
-            else:
-                target_date = date.today()
-            data = method(target_date)
-        elif func_name == "stock_sector_fund_flow_rank":
-            indicator = params.get("indicator", "今日")
-            sector_type = params.get("sector_type", "行业资金流")
-            data = method(indicator, sector_type)
-        else:
-            # 默认调用无参数方法
-            data = method()
-
+    def _convert_to_chinese(data: List[Dict], func_name: str) -> Dict:
+        """将数据转换为中文列名"""
         if not data:
-            return None
+            return {"data": data, "columns": []}
 
-        # 获取字段中文映射
         column_aliases = YzDataService._get_column_aliases(func_name)
 
-        # 转换数据为中文列名
         if column_aliases:
             # 转换 columns 为中文
             columns = [column_aliases.get(col, col) for col in data[0].keys()]
@@ -216,8 +239,77 @@ class YzDataService:
         return {"data": data, "columns": columns}
 
     @staticmethod
+    def query_from_local(func_name: str, params: dict) -> Optional[Dict]:
+        """从本地查询数据，返回 {data, columns} 格式"""
+        # 获取接口配置
+        config = YzDataService.CACHE_CONFIG.get(func_name)
+        if not config:
+            return None
+
+        query_type = config.get("query_type")
+        method_name = YzDataService.QUERY_METHODS.get(func_name)
+        if not method_name:
+            return None
+
+        method = getattr(YzDataService, method_name, None)
+        if not method:
+            return None
+
+        # 根据 query_type 调用不同的查询方法
+        if query_type == "date":
+            # 按日期查询
+            date_param = config.get("date_param", "date")
+            target_date = params.get(date_param)
+            if target_date:
+                target_date = datetime.strptime(target_date, "%Y%m%d").date()
+            else:
+                target_date = date.today()
+            data = method(target_date)
+
+        elif query_type == "stock":
+            # 按股票查询
+            stock_param = config.get("stock_param", "stock")
+            stock_code = params.get(stock_param)
+            if not stock_code:
+                # 需要股票代码才能查询
+                return None
+            data = method(stock_code)
+
+        elif query_type == "params":
+            # 自定义参数组合
+            query_params = config.get("params", [])
+            query_args = [params.get(p) for p in query_params]
+            data = method(*query_args) if all(query_args) else None
+
+        elif query_type == "date_range":
+            # 日期范围查询 - 返回最新数据
+            data = method()
+
+        elif query_type == "latest":
+            # 无参数，返回最新数据
+            data = method()
+
+        elif query_type == "realtime":
+            # 实时行情不缓存
+            return None
+
+        else:
+            data = method()
+
+        if not data:
+            return None
+
+        # 获取字段中文映射并转换
+        return YzDataService._convert_to_chinese(data, func_name)
+
+    @staticmethod
     def save_to_local(func_name: str, params: dict, result: dict):
         """保存数据到本地"""
+        # 获取接口配置
+        config = YzDataService.CACHE_CONFIG.get(func_name)
+        if not config or not config.get("sync"):
+            return
+
         method_name = YzDataService.SAVE_METHODS.get(func_name)
         if not method_name:
             return
@@ -231,32 +323,33 @@ class YzDataService:
         if not data:
             return
 
-        import pandas as pd
         df = pd.DataFrame(data)
 
-        # 根据函数类型调用不同的保存方法
-        if func_name == "stock_individual_fund_flow":
-            stock_code = params.get("stock")
-            if stock_code:
-                method(df, stock_code)
-        elif func_name in ["stock_zh_a_limit_up_em", "stock_zt_pool_em"]:
-            target_date = params.get("date")
+        query_type = config.get("query_type")
+
+        # 根据 query_type 调用不同的保存方法
+        if query_type == "date":
+            date_param = config.get("date_param", "date")
+            target_date = params.get(date_param)
             if target_date:
-                from datetime import datetime
                 target_date = datetime.strptime(target_date, "%Y%m%d").date()
             else:
-                from datetime import date
                 target_date = date.today()
             method(df, target_date)
-        elif func_name == "stock_sector_fund_flow_rank":
-            indicator = params.get("indicator", "今日")
-            sector_type = params.get("sector_type", "行业资金流")
-            method(df, indicator, sector_type)
-        elif func_name == "stock_lhb_detail_em":
-            method(df)
-        elif func_name == "stock_lhb_yytj_sina":
-            method(df)
-        elif func_name == "stock_lh_yyb_most":
+
+        elif query_type == "stock":
+            stock_param = config.get("stock_param", "stock")
+            stock_code = params.get(stock_param)
+            if stock_code:
+                method(df, stock_code)
+
+        elif query_type == "params":
+            query_params = config.get("params", [])
+            query_args = [params.get(p) for p in query_params]
+            method(df, *query_args) if all(query_args) else None
+
+        elif query_type in ["date_range", "latest"]:
+            # 日期范围或最新数据，直接保存
             method(df)
 
     # ==================== A股实时行情 ====================
