@@ -1,0 +1,16 @@
+{
+  "mcp_servers": {
+    "akshare": {
+      "command": "/Users/lianwu/ai/projects/a-stock-trade/backend/.venv/bin/python3",
+      "args": ["/Users/lianwu/ai/mcp/mcp_akshare/run.py"]
+    },
+    "minimax": {
+      "command": "uvx",
+      "args": ["minimax-coding-plan-mcp", "-y"],
+      "env": {
+        "MINIMAX_API_HOST": "https://api.minimaxi.com",
+        "MINIMAX_API_KEY": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
